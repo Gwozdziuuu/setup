@@ -1,0 +1,16 @@
+# Połączenie admina
+psql_login_host: 127.0.0.1
+psql_port: 5432
+psql_adm_user: postgres
+psql_adm_pass: "{{ vault_psql_adm_pass }}"
+
+# Parametry projektu
+db_name: test
+db_user: test_app
+db_pass: "{{ vault_db_pass }}"
+db_encoding: "UTF-8"
+db_locale: "en_US.UTF-8"
+db_schema: "test"
+db_extensions:
+  - "uuid-ossp"
+  - "pgcrypto"

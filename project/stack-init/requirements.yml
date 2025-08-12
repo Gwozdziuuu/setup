@@ -1,0 +1,4 @@
+collections:
+  - name: https://github.com/Gwozdziuuu/setup.git#/ansible_collections/gwozdziuuu/setup
+    type: git
+    version: main
