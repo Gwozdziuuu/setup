@@ -1,0 +1,6 @@
+namespace: gwozdziuuu
+name: setup
+version: 1.0.0
+readme: README.md
+dependencies:
+  community.postgresql: ">=3.4.0,<5.0.0"
