@@ -1,0 +1,29 @@
+---
+# tasks file for roles/container-network
+- name: Create public network
+  docker_network:
+    name: public
+    driver: overlay
+    state: present
+
+- name: Create 'backend' network
+  docker_network:
+    name: 'backend'
+    driver: overlay
+    attachable: true
+    scope: swarm
+    state: present
+
+- name: Create 'database' network
+  docker_network:
+    name: 'database'
+    driver: overlay
+    scope: swarm
+    state: present
+
+- name: Create 'vault_network' network
+  docker_network:
+    name: 'vault_network'
+    driver: overlay
+    scope: swarm
+    state: present
