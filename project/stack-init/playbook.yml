@@ -3,4 +3,5 @@
   vars_files:
     - inventory/group_vars/stack.yml
   roles:
+    - gwozdziuuu.setup.docker
     - gwozdziuuu.setup.create_db
