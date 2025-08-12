@@ -1,0 +1,6 @@
+galaxy_info:
+  author: Marcin Gwozdz (mrn.gwozdz@gmail.com)
+  role_name: create_db
+  namespace: org
+  min_ansible_version: "2.14"
+dependencies: []

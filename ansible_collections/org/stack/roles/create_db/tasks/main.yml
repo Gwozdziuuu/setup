@@ -1,0 +1,52 @@
+- name: Assert required vars
+  ansible.builtin.assert:
+    that:
+      - db_name | length > 0
+      - db_user | length > 0
+      - db_pass | length > 0
+      - vault_psql_adm_pass | length > 0
+    fail_msg: "Missing one of: db_name, db_user, db_pass, vault_psql_adm_pass"
+
+- name: Create user '{{ db_user }}' if not exists
+  community.postgresql.postgresql_query:
+    login_host: "{{ postgres_host }}"
+    login_port: "{{ postgres_port }}"
+    login_user: "{{ postgres_admin_user }}"
+    login_password: "{{ vault_psql_adm_pass }}"
+    db: "postgres"
+    query: |
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '{{ db_user }}') THEN
+          CREATE USER {{ db_user }} WITH PASSWORD '{{ db_pass }}';
+        ELSE
+          RAISE NOTICE 'User "{{ db_user }}" already exists, skipping creation.';
+        END IF;
+      END
+      $$;
+
+- name: Ensure database '{{ db_name }}' exists
+  community.postgresql.postgresql_db:
+    name: "{{ db_name }}"
+    login_host: "{{ postgres_host }}"
+    login_port: "{{ postgres_port }}"
+    login_user: "{{ postgres_admin_user }}"
+    login_password: "{{ vault_psql_adm_pass }}"
+    state: present
+    encoding: "{{ encoding }}"
+    lc_collate: "{{ lc_collate }}"
+    lc_ctype: "{{ lc_ctype }}"
+  register: db_created
+
+- name: Grant ALL on database to '{{ db_user }}'
+  community.postgresql.postgresql_privs:
+    login_host: "{{ postgres_host }}"
+    login_port: "{{ postgres_port }}"
+    login_user: "{{ postgres_admin_user }}"
+    login_password: "{{ vault_psql_adm_pass }}"
+    db: "{{ db_name }}"
+    type: database
+    objs: "{{ db_name }}"
+    roles: "{{ db_user }}"
+    privs: ALL
+    state: present
