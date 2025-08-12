@@ -12,4 +12,5 @@ tags:
   - setup
 dependencies:
   community.postgresql: ">=3.4.0,<5.0.0"
+  community.docker: '>=3.8.0'
 repository: "https://github.com/Gwozdziuuu/setup"

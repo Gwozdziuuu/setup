@@ -1,0 +1,31 @@
+- name: create stacks dir
+  ansible.builtin.file:
+    path: /home/{{ansible_user}}/stacks
+    state: directory 
+    mode: '0755'
+
+- name: install python package manager
+  ansible.builtin.dnf:
+    name: python3-pip
+    state: present
+
+- name: install required Python libraries for managers
+  pip:
+    name: "{{ item }}"
+  loop:
+    - jsondiff
+    - pyyaml
+    - docker
+
+- name: Ensure docker is running
+  become: true
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: init swarm
+  docker_swarm:
+    state: present 
+    advertise_addr: 127.0.0.1:2377
+  register: __output_swarm
