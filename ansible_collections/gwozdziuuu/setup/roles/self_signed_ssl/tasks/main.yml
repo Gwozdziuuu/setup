@@ -1,0 +1,32 @@
+---
+- name: Assert required vars for certs (when not using Let's Encrypt)
+  ansible.builtin.assert:
+    that:
+      - main_domain_name is defined
+      - (main_domain_name | string | trim) | length > 0
+    fail_msg: "Gdy lets_encrypt=false, zmienna main_domain_name musi być ustawiona (np. example.com)."
+  when: not (lets_encrypt | default(false))
+  
+- block:
+    - name: Copy cert generation script to host
+      template:
+        src: cert_generator.j2
+        dest: /tmp/cert_generator.sh
+        mode: '0755'
+
+    - name: Run cert generation script
+      shell: /tmp/cert_generator.sh
+
+    - name: Create docker secret crt
+      community.docker.docker_secret:
+        name: testto_wildcard_crt
+        data_src: /etc/ssl/{{main_domain_name}}/{{main_domain_name}}.crt
+        state: present
+
+    - name: Create docker secret key
+      community.docker.docker_secret:
+        name: testto_wildcard_key
+        data_src: /etc/ssl/{{main_domain_name}}/{{main_domain_name}}.key
+        state: present
+  become: true
+  when: not lets_encrypt
