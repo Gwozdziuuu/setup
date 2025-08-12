@@ -1,6 +1,15 @@
 namespace: gwozdziuuu
 name: setup
-version: 1.0.0
+version: 0.1.0
 readme: README.md
+authors:
+  - "Marcin Gwóźdź"
+description: "Create database for Postgres DB"
+license:
+  - MIT
+tags:
+  - postgres
+  - setup
 dependencies:
   community.postgresql: ">=3.4.0,<5.0.0"
+repository: "https://github.com/Gwozdziuuu/setup"
