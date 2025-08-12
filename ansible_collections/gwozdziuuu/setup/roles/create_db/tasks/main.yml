@@ -7,27 +7,29 @@
       - vault_psql_adm_pass | length > 0
     fail_msg: "Missing one of: db_name, db_user, db_pass, vault_psql_adm_pass"
 
-- name: Create user '{{ db_user }}' if not exists
-  community.postgresql.postgresql_query:
+- name: Wait for Postgres to accept connections
+  ansible.builtin.wait_for:
+    host: "{{ postgres_host }}"
+    port: "{{ postgres_port }}"
+    delay: 2
+    timeout: 60
+    
+- name: Ensure role '{{ db_user }}' exists with login
+  community.postgresql.postgresql_user:
+    name: "{{ db_user }}"
+    password: "{{ db_pass }}"
+    role_attr_flags: LOGIN
     login_host: "{{ postgres_host }}"
     login_port: "{{ postgres_port }}"
     login_user: "{{ postgres_admin_user }}"
     login_password: "{{ vault_psql_adm_pass }}"
-    db: "postgres"
-    query: |
-      DO $$
-      BEGIN
-        IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '{{ db_user }}') THEN
-          CREATE USER {{ db_user }} WITH PASSWORD '{{ db_pass }}';
-        ELSE
-          RAISE NOTICE 'User "{{ db_user }}" already exists, skipping creation.';
-        END IF;
-      END
-      $$;
+    state: present
+  no_log: true
 
-- name: Ensure database '{{ db_name }}' exists
+- name: Ensure database '{{ db_name }}' exists (owned by {{ db_user }})
   community.postgresql.postgresql_db:
     name: "{{ db_name }}"
+    owner: "{{ db_user }}"
     login_host: "{{ postgres_host }}"
     login_port: "{{ postgres_port }}"
     login_user: "{{ postgres_admin_user }}"
@@ -38,15 +40,16 @@
     lc_ctype: "{{ lc_ctype }}"
   register: db_created
 
-- name: Grant ALL on database to '{{ db_user }}'
+- name: Grant ALL on database to '{{ db_user }}' (optional)
   community.postgresql.postgresql_privs:
     login_host: "{{ postgres_host }}"
     login_port: "{{ postgres_port }}"
     login_user: "{{ postgres_admin_user }}"
     login_password: "{{ vault_psql_adm_pass }}"
-    db: "{{ db_name }}"
+    login_db: "{{ db_name }}"
     type: database
     objs: "{{ db_name }}"
     roles: "{{ db_user }}"
     privs: ALL
     state: present
+
