@@ -1,7 +1,17 @@
 - hosts: db
   gather_facts: false
-  vars_files:
-    - inventory/group_vars/stack.yml
+  vars:
+    ansible_user: "{{ vault_root_user | default('root') }}"
+    ansible_password: "{{ vault_root_password }}"
+    ansible_become: false
+    managed_user: ansible
+    managed_user_password: "{{ vault_ansible_password }}"
+  roles:
+    - gwozdziuuu.setup.bootstrap_ansible_user
+
+- hosts: db
   roles:
     - gwozdziuuu.setup.docker
-    - gwozdziuuu.setup.create_db
+    - gwozdziuuu.setup.swarm
+    - gwozdziuuu.setup.container_network
+    - gwozdziuuu.setup.traefik
