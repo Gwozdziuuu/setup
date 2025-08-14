@@ -1,0 +1,22 @@
+---
+# tasks file for roles/n8n
+- name: Create multiple directories on first manager host
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /home/{{ansible_user}}/stacks/n8n
+
+- name: Copy template to first manager host
+  template:
+    src: n8n.j2
+    dest: /home/{{ansible_user}}/stacks/n8n/n8n.yml
+    mode: '0755'
+
+- name: Deploy stack from a compose file
+  docker_stack:
+    state: present
+    name: n8n
+    compose:
+      - /home/{{ansible_user}}/stacks/n8n/n8n.yml

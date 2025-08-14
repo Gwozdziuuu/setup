@@ -1,0 +1,2 @@
+main_domain_name: ""
+n8n_subdomain: "n8n.{{main_domain_name}}"

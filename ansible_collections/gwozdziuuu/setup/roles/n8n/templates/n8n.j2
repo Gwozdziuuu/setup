@@ -1,0 +1,43 @@
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    deploy:
+      mode: replicated
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.n8n.rule=Host(`{{n8n_subdomain}}`)
+        - traefik.http.routers.n8n.tls=true
+        - traefik.http.routers.n8n.entrypoints=web,websecure
+        - traefik.http.services.n8n.loadbalancer.server.port=5678
+{% if lets_encrypt %} 
+        - traefik.http.routers.n8n.tls.certresolver=myresolver
+{% endif %}
+        - traefik.http.middlewares.n8n.headers.SSLRedirect=true
+        - traefik.http.middlewares.n8n.headers.STSSeconds=315360000
+        - traefik.http.middlewares.n8n.headers.browserXSSFilter=true
+        - traefik.http.middlewares.n8n.headers.contentTypeNosniff=true
+        - traefik.http.middlewares.n8n.headers.forceSTSHeader=true
+        - traefik.http.middlewares.n8n.headers.SSLHost={{n8n_subdomain}}
+        - traefik.http.middlewares.n8n.headers.STSIncludeSubdomains=true
+        - traefik.http.middlewares.n8n.headers.STSPreload=true
+        - traefik.http.routers.n8n.middlewares=n8n@docker
+    environment:
+      N8N_HOST: "{{n8n_subdomain}}"
+      N8N_PORT: 5678
+      N8N_PROTOCOL: "https"
+      NODE_ENV: "production"
+      WEBHOOK_URL: "https://{{n8n_subdomain}}/"
+      GENERIC_TIMEZONE: "Europe/Warsaw"
+      N8N_SECURE_COOKIE: "true"
+      N8N_RUNNERS_ENABLED: "true"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - public
+
+volumes:
+  n8n_data:
+
+networks:
+  public:
+    external: true
