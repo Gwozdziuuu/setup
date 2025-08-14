@@ -1,0 +1,2 @@
+managed_user: ansible
+managed_user_password: "{{ vault_ansible_password }}"

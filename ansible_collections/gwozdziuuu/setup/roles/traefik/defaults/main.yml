@@ -1,0 +1,6 @@
+---
+main_domain_name: ""
+traefik_subdomain: "traefik.{{main_domain_name}}"
+letsencrypt_email: "admin@example.com"
+public_network_name: "public"
+lets_encrypt: false

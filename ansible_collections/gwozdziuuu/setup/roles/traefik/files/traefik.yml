@@ -1,0 +1,51 @@
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+accessLog:
+  filePath: "/tmp/access.log"
+  format: json
+  bufferingSize: 100
+
+log:
+ level: ERROR
+ format: common
+
+# Debug only
+# api:
+#  dashboard: true
+#  insecure: true
+
+entryPoints:
+  web:
+    address: :80
+    forwardedHeaders:
+      insecure: true
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+  websecure:
+    address: :443
+
+# # Disable TLS Cert verification check
+# serversTransport:
+#   insecureSkipVerify: true
+
+certificatesResolvers:
+  myresolver:
+    acme:
+      email: admin@testto.com
+      storage: acme.json
+      tlsChallenge: {}
+
+providers:
+  docker:
+    swarmMode: true
+    network: public
+    exposedByDefault: false
+    watch: true
+  # file:
+  #   filename: /etc/traefik/dynamic_conf.yml
+  #   watch: true

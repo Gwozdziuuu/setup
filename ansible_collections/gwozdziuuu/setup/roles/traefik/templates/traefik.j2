@@ -1,0 +1,51 @@
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+accessLog:
+  filePath: "/tmp/access.log"
+  format: json
+  bufferingSize: 100
+
+log:
+  level: ERROR
+  format: common
+
+# WŁĄCZ dashboard
+api:
+  dashboard: true
+
+entryPoints:
+  web:
+    address: :80
+    forwardedHeaders:
+      insecure: true
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+  websecure:
+    address: :443
+
+{% if lets_encrypt %}
+certificatesResolvers:
+  myresolver:
+    acme:
+      email: {{ letsencrypt_email | default('admin@example.com') }}
+      storage: /letsencrypt/acme.json
+      httpChallenge:
+        entryPoint: web
+{% endif %}
+
+providers:
+  docker:
+    swarmMode: true
+    network: public
+    exposedByDefault: false
+    watch: true
+{% if not lets_encrypt %}
+  file:
+    filename: /etc/traefik/dynamic_conf.yml
+    watch: true
+{% endif %}

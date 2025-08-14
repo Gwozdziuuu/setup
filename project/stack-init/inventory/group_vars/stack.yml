@@ -1,3 +1,8 @@
+# Parametry self-signed-ssl
+lets_encrypt: true
+letsencrypt_email: "mrn.gwozdz@gmail.com"
+main_domain_name: "{{ vault_main_domain_name | default('') }}"
+
 # Połączenie admina
 psql_login_host: 127.0.0.1
 psql_port: 5432

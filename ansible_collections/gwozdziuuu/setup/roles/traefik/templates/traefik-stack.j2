@@ -1,0 +1,49 @@
+version: "3.9"
+
+services:
+  traefik:
+    image: quay.io/testto/traefik:v2.11.14
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - traefik.enable=true
+        - traefik.http.services.traefik-service.loadbalancer.server.port=8080
+        - traefik.http.routers.mydashboard.rule=Host(`{{ traefik_subdomain }}`)
+        - traefik.http.routers.mydashboard.entrypoints=websecure
+        - traefik.http.routers.mydashboard.tls=true
+        - traefik.http.routers.mydashboard.tls.certresolver=myresolver
+        - traefik.http.routers.mydashboard.service=api@internal
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "10"
+        mode: non-blocking
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./config/traefik.yml:/etc/traefik/traefik.yml
+{% if not lets_encrypt %}
+      - ./config/dynamic_conf.yml:/etc/traefik/dynamic_conf.yml
+{% endif %}
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/localtime:/etc/localtime:ro
+{% if lets_encrypt %}
+      - letsencrypt_data:/letsencrypt
+{% endif %}
+    networks:
+      - public
+
+{% if lets_encrypt %}
+volumes:
+  letsencrypt_data:
+    driver: local
+{% endif %}
+
+networks:
+  public:
+    external: true

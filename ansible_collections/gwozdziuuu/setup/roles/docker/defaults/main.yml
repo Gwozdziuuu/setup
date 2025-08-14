@@ -1,3 +1,10 @@
-docker_repo_baseurl: "https://download.docker.com/linux/centos/$releasever/$basearch/stable"
-docker_repo_gpgkey: "https://download.docker.com/linux/centos/gpg"
-install_docker_sdk: true
+docker_packages:
+  - mc
+  - dnf-plugins-core
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - python3-pip
+
+docker_repo_url: https://download.docker.com/linux/centos/docker-ce.repo
+docker_repo: docker-ce.repo

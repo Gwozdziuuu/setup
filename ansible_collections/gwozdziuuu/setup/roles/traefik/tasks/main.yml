@@ -1,0 +1,93 @@
+---
+# tasks file for roles/traefik (Let's Encrypt only, Swarm)
+
+# Jeśli ktoś poda tylko main_domain_name, zbuduj subdomenę automatycznie.
+- name: Derive traefik_subdomain from main_domain_name (if missing)
+  ansible.builtin.set_fact:
+    traefik_subdomain: "traefik.{{ main_domain_name }}"
+  when:
+    - traefik_subdomain is not defined
+    - main_domain_name is defined
+    - (main_domain_name | length) > 0
+
+- name: Assert required vars for Traefik + LE
+  ansible.builtin.assert:
+    that:
+      - traefik_subdomain is defined
+      - traefik_subdomain | length > 0
+      - letsencrypt_email is defined
+      - letsencrypt_email | length > 0
+    fail_msg: "Provide traefik_subdomain (or main_domain_name to derive) and letsencrypt_email."
+
+# Wymuszamy tryb LE (szablony mogą używać lets_encrypt do warunków)
+- name: Force Let's Encrypt mode
+  ansible.builtin.set_fact:
+    lets_encrypt: true
+
+- name: Ensure Traefik directories exist
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "/home/{{ ansible_user }}/stacks/traefik"
+    - "/home/{{ ansible_user }}/stacks/traefik/config"
+
+# Statyczna konfiguracja Traefika (traefik.yml) – musi zawierać certResolver 'myresolver'
+# i storage: /letsencrypt/acme.json (patrz wcześniejsze traefik.j2)
+- name: Template static Traefik config
+  become: true
+  ansible.builtin.template:
+    src: "traefik.j2"
+    dest: "/home/{{ ansible_user }}/stacks/traefik/config/traefik.yml"
+    mode: '0644'
+
+# Stack/compose dla Traefika (traefik.yml w katalogu stacka)
+# – powinien montować named volume 'letsencrypt_data:/letsencrypt'
+#   i mieć etykiety TLS na routerze dashboardu
+- name: Template Traefik stack compose
+  become: true
+  ansible.builtin.template:
+    src: "traefik-stack.j2"
+    dest: "/home/{{ ansible_user }}/stacks/traefik/traefik.yml"
+    mode: '0644'
+
+# (Opcjonalnie) sprawdź Swarm (jeśli chcesz initować, dodaj docker_swarm w swojej roli)
+# - name: Get swarm info
+#   community.docker.docker_swarm_info:
+#   register: swarm_info
+
+# Sprawdź czy overlay network istnieje (użyj name:, nie names:)
+- name: Lookup overlay network
+  become: true
+  community.docker.docker_network_info:
+    name: "{{ public_network_name | default('public') }}"
+  register: net_info
+  failed_when: false      # brak sieci = brak błędu
+  changed_when: false
+
+# Utwórz sieć TYLKO jeśli jej nie ma
+- name: Create overlay network (only if missing)
+  become: true
+  community.docker.docker_network:
+    name: "{{ public_network_name | default('public') }}"
+    driver: overlay
+    scope: swarm
+    attachable: true
+    state: present
+  when: net_info.network is not defined
+
+- name: Network exists – leave as is
+  ansible.builtin.debug:
+    msg: "Network {{ public_network_name | default('public') }} already exists; not modifying."
+  when: net_info.network is defined
+
+# Deploy Traefika jako stack w Swarm
+- name: Deploy Traefik stack
+  become: true
+  community.docker.docker_stack:
+    state: present
+    name: traefik
+    compose:
+      - "/home/{{ ansible_user }}/stacks/traefik/traefik.yml"

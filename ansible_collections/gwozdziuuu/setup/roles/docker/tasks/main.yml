@@ -1,54 +1,26 @@
-- name: Ensure dnf plugins are present
-  ansible.builtin.dnf:
-    name: dnf-plugins-core
-    state: present
+- name: Add Docker repository
+  command:
+    cmd: dnf config-manager --add-repo "{{ docker_repo_url }}"
+  args:
+    creates: /etc/yum.repos.d/docker-ce.repo
 
-- name: Add Docker CE repository (idempotent)
-  ansible.builtin.yum_repository:
-    name: docker-ce-stable
-    description: Docker CE Stable
-    baseurl: "{{ docker_repo_baseurl }}"
-    enabled: true
-    gpgcheck: true
-    gpgkey: "{{ docker_repo_gpgkey }}"
-  register: docker_repo
-
-- name: Refresh cache if repo changed
+- name: Update package cache after adding repository
   ansible.builtin.dnf:
     update_cache: yes
-  when: docker_repo is changed
 
-- name: Install Docker engine and tools
+- name: Install Docker and dependencies
   ansible.builtin.dnf:
     name: "{{ docker_packages }}"
-    state: present
-  vars:
-    docker_packages:
-      - docker-ce
-      - docker-ce-cli
-      - containerd.io
-      - docker-buildx-plugin
-      - docker-compose-plugin
+    state: latest
+  with_items: "{{ docker_packages }}"
 
-- name: Install Docker SDK for Python (optional, for community.docker modules)
-  ansible.builtin.pip:
-    name: docker
-    state: present
-  when: install_docker_sdk | default(true)
+- name: Add user to docker group
+  user:
+    name: "{{ ansible_user }}"
+    group: docker
 
-- name: Ensure 'docker' group exists
-  ansible.builtin.group:
-    name: docker
-    state: present
-
-- name: Add current user to docker group (supplementary)
-  ansible.builtin.user:
-    name: "{{ ansible_user_id | default(ansible_user) }}"
-    groups: docker
-    append: yes
-
-- name: Enable and start Docker service
-  ansible.builtin.service:
+- name: Start Docker
+  service:
     name: docker
     state: started
-    enabled: true
+    enabled: yes
