@@ -33,9 +33,9 @@ quarkus-init:
 	test -d "$$TMP/src/project/quarkus" || { echo "ERROR: subdir 'project/quarkus' not found"; exit 1; }
 	mkdir -p "../../quarkus"
 	if command -v rsync >/dev/null 2>&1; then
-	  rsync -a "$$TMP/src/project/quarkus/" "../../quarkus/"
+	  rsync -a "$$TMP/src/project/quarkus/" "../quarkus/"
 	else
-	  (cd "$$TMP/src/project/quarkus" && tar cf - .) | (cd "../../quarkus" && tar xf -)
+	  (cd "$$TMP/src/project/quarkus" && tar cf - .) | (cd "../quarkus" && tar xf -)
 	fi
 	rm -rf "$$TMP"
-	echo ">> Done. Copied to: $(abspath ../../quarkus)"
+	echo ">> Done. Copied to: $(abspath ../quarkus)"
