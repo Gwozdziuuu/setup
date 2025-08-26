@@ -1,5 +1,6 @@
 /home/marcin/Programowanie/Gwozdziu/setup/quarkus/project/quarkus/src/main/java/com/mrngwozdz/GreetingResource.java
 /home/marcin/Programowanie/Gwozdziu/setup/quarkus/project/quarkus/src/main/java/com/mrngwozdz/api/EventsApi.java
+/home/marcin/Programowanie/Gwozdziu/setup/quarkus/project/quarkus/src/main/java/com/mrngwozdz/api/controller/BannerController.java
 /home/marcin/Programowanie/Gwozdziu/setup/quarkus/project/quarkus/src/main/java/com/mrngwozdz/api/controller/EventController.java
 /home/marcin/Programowanie/Gwozdziu/setup/quarkus/project/quarkus/src/main/java/com/mrngwozdz/api/model/EventGroupDTO.java
 /home/marcin/Programowanie/Gwozdziu/setup/quarkus/project/quarkus/src/main/java/com/mrngwozdz/api/model/EventItemDTO.java
@@ -10,4 +11,5 @@
 /home/marcin/Programowanie/Gwozdziu/setup/quarkus/project/quarkus/src/main/java/com/mrngwozdz/common/interceptor/RequestResponseLoggerInterceptor.java
 /home/marcin/Programowanie/Gwozdziu/setup/quarkus/project/quarkus/src/main/java/com/mrngwozdz/database/AppEvent.java
 /home/marcin/Programowanie/Gwozdziu/setup/quarkus/project/quarkus/src/main/java/com/mrngwozdz/service/appevent/AppEventService.java
+/home/marcin/Programowanie/Gwozdziu/setup/quarkus/project/quarkus/src/main/java/com/mrngwozdz/service/appevent/SseEventService.java
 /home/marcin/Programowanie/Gwozdziu/setup/quarkus/project/quarkus/src/main/java/com/mrngwozdz/service/appevent/data/EventRepository.java

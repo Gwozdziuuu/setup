@@ -104,8 +104,9 @@ class EventsTableView {
     }
 
     _groupRow(group, index, onToggle) {
+        const rowClass = group._isNew ? 'group-row new-group' : 'group-row';
         const row = Dom.el('tr', {
-            className: 'group-row',
+            className: rowClass,
             attrs: { 'data-index': String(index) }
         });
 
@@ -202,6 +203,7 @@ class App {
         this.table = table;
         this.modal = modal;
         this.state = { groups: [] };
+        this.eventSource = null;
     }
 
     async init() {
@@ -225,10 +227,71 @@ class App {
                 onEventClick: (gi, ei) => this.showEventDetails(gi, ei)
             });
             this._showContainer(true);
+            
+            // Connect to SSE stream after initial load
+            this._connectToEventStream();
         } catch (err) {
             this.error.show(`Error loading events: ${err.message}`);
         } finally {
             this.spinner.hide();
+        }
+    }
+
+    _connectToEventStream() {
+        if (this.eventSource) {
+            this.eventSource.close();
+        }
+
+        this.eventSource = new EventSource('/events/stream');
+
+        this.eventSource.onmessage = (event) => {
+            try {
+                const newGroup = JSON.parse(event.data);
+                this._addOrUpdateGroup(newGroup);
+            } catch (error) {
+                console.error('Error parsing SSE event data:', error);
+            }
+        };
+
+        this.eventSource.onerror = (error) => {
+            console.error('EventSource failed:', error);
+            // Try to reconnect after 5 seconds
+            setTimeout(() => this._connectToEventStream(), 5000);
+        };
+
+        this.eventSource.onopen = () => {
+            console.log('Connected to event stream');
+        };
+    }
+
+    _addOrUpdateGroup(newGroup) {
+        // Find existing group by serial (UUID)
+        const existingIndex = this.state.groups.findIndex(g => g.serial === newGroup.serial);
+        
+        if (existingIndex >= 0) {
+            // Update existing group
+            this.state.groups[existingIndex] = newGroup;
+        } else {
+            // Add new group at the beginning
+            this.state.groups.unshift(newGroup);
+            newGroup._isNew = true; // Mark as new for styling
+        }
+
+        // Re-render the table with updated data
+        this.table.render(this.state.groups, {
+            onToggle: (i) => this.table.toggle(i),
+            onEventClick: (gi, ei) => this.showEventDetails(gi, ei)
+        });
+        
+        // Remove the new flag after animation
+        if (newGroup._isNew) {
+            setTimeout(() => {
+                delete newGroup._isNew;
+                this.table.render(this.state.groups, {
+                    onToggle: (i) => this.table.toggle(i),
+                    onEventClick: (gi, ei) => this.showEventDetails(gi, ei)
+                });
+            }, 1000);
         }
     }
 
@@ -306,4 +369,11 @@ document.addEventListener('DOMContentLoaded', () => {
         modal: new ModalView('event-details-modal', 'modal-content', 'modal-close')
     });
     app.init();
+});
+
+// Clean up EventSource when page unloads
+window.addEventListener('beforeunload', () => {
+    if (window.app && window.app.eventSource) {
+        window.app.eventSource.close();
+    }
 });

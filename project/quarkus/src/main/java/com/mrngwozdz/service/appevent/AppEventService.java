@@ -5,6 +5,8 @@ import com.mrngwozdz.api.model.request.EventRequest;
 import com.mrngwozdz.api.model.EventGroupDTO;
 import com.mrngwozdz.api.model.EventItemDTO;
 import com.mrngwozdz.database.AppEvent;
+import io.smallrye.mutiny.Multi;
+import jakarta.enterprise.event.Event;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +20,7 @@ import java.util.stream.Collectors;
 public class AppEventService {
 
     private final EventRepository eventRepository;
+    private final Event<EventGroupDTO> eventBroadcast;
 
     @Transactional
     public void logEvent(UUID serial, EventRequest request) {
@@ -28,6 +31,33 @@ public class AppEventService {
                 request.eventData()
         );
         eventRepository.persist(event);
+        
+        EventGroupDTO group = buildEventGroup(serial);
+        if (group != null) {
+            eventBroadcast.fire(group);
+        }
+    }
+
+    public Multi<String> getEventStream() {
+        return SseEventService.getEventStream();
+    }
+
+    private EventGroupDTO buildEventGroup(UUID serial) {
+        List<AppEvent> groupEvents = eventRepository.findBySerial(serial);
+        if (groupEvents.isEmpty()) {
+            return null;
+        }
+        
+        groupEvents.sort(Comparator.comparing(AppEvent::getCreatedAt));
+        String methodName = extractMethodName(groupEvents.get(0).getDescription());
+        Long duration = calculateDuration(groupEvents);
+        String status = groupEvents.stream()
+                .anyMatch(e -> "API_ERROR".equals(e.getEventType())) ? "FAILURE" : "SUCCESS";
+        List<EventItemDTO> eventItems = groupEvents.stream()
+                .map(e -> new EventItemDTO(e.getEventType(), e.getDescription(), e.getEventData(), e.getCreatedAt()))
+                .toList();
+        
+        return new EventGroupDTO(serial, methodName, duration, status, eventItems);
     }
 
     public List<EventGroupDTO> getRecentEventGroups(int limit) {

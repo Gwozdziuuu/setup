@@ -37,6 +37,11 @@ public class RequestResponseLoggerInterceptor {
         String requestData = serializeParameters(context.getParameters());
         log.info("[{}] Request to {}.{} - Parameters: {}", requestId, className, methodName, requestData);
         
+        // Skip logging for SSE stream endpoints to avoid transaction issues
+        if (methodName.equals("streamEvents")) {
+            return context.proceed();
+        }
+        
         // Log as event with serial UUID
         appEventService.logEvent(serial, new EventRequest(
                 "API_REQUEST", 
