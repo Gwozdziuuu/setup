@@ -1,0 +1,26 @@
+---
+# Main domain configuration
+main_domain_name: ""
+
+# MinIO configuration
+minio_root_user: "minio"
+minio_root_password: "{{ vault_minio_root_password }}!"
+minio_data_path: "/srv/swarm/minio_data"
+stack_name: "minio"
+
+# Domain configuration
+minio_api_subdomain: "minio-api.{{ main_domain_name }}"
+minio_console_subdomain: "minio.{{ main_domain_name }}"
+
+# Docker Swarm configuration
+minio_stack_compose_path: "/home/ansible/stacks/minio/minio.yml"
+
+# Directory and permission settings
+minio_data_owner: "root"
+minio_data_group: "root"
+minio_data_mode: "0755"
+
+# Service health check
+minio_health_check_retries: 30
+minio_health_check_delay: 10
+

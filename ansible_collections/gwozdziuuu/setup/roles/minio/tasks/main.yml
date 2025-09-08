@@ -1,0 +1,65 @@
+---
+- name: Get current Swarm node ID
+  shell: docker info --format '{{ '{{.Swarm.NodeID}}' }}'
+  register: swarm_node_id
+
+- name: Add minio=true label to Swarm node
+  shell: docker node update --label-add minio=true {{ swarm_node_id.stdout }}
+
+- name: Create MinIO data directory
+  file:
+    path: "{{ minio_data_path }}"
+    state: directory
+    owner: "{{ minio_data_owner }}"
+    group: "{{ minio_data_group }}"
+    mode: "{{ minio_data_mode }}"
+
+
+- name: Remove existing MinIO root user secret (ignore errors)
+  docker_secret:
+    name: minio_root_user
+    state: absent
+  ignore_errors: yes
+
+- name: Remove existing MinIO root password secret (ignore errors)
+  docker_secret:
+    name: minio_root_password
+    state: absent
+  ignore_errors: yes
+
+- name: Create MinIO root user secret
+  docker_secret:
+    name: minio_root_user
+    data: "{{ minio_root_user }}"
+    state: present
+
+- name: Create MinIO root password secret
+  docker_secret:
+    name: minio_root_password
+    data: "{{ minio_root_password }}"
+    state: present
+
+- name: Deploy MinIO stack
+  docker_stack:
+    name: "{{ stack_name }}"
+    compose:
+      - "{{ minio_stack_compose_path }}"
+    state: present
+
+- name: Wait for MinIO service to be running
+  shell: |
+    for i in {1..{{ minio_health_check_retries }}}; do
+      if docker service ps {{ stack_name }}_minio --format "table {{ '{{.CurrentState}}' }}" | grep -q "Running"; then
+        exit 0
+      fi
+      sleep {{ minio_health_check_delay }}
+    done
+    exit 1
+  register: minio_status
+
+- name: Display MinIO access information
+  debug:
+    msg:
+      - "MinIO has been deployed successfully!"
+      - "API URL: https://{{ minio_api_subdomain }}"
+      - "Console URL: https://{{ minio_console_subdomain }}"
