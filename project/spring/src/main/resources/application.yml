@@ -41,3 +41,17 @@ spring:
     port: 5672
     username: setup
     password: setup
+    exchange-name: "setup.direct.exchange"
+    order:
+      name: "setup.order.queue"
+      routing-key: "order"
+    notification:
+      name: "setup.notification.queue"
+      routing-key: "notification"
+    audit:
+      name: "setup.audit.queue"
+      routing-key: "audit"
+    listener:
+      order-concurrency: "1-10"
+      notification-concurrency: "1-5"
+      audit-concurrency: "1-3"

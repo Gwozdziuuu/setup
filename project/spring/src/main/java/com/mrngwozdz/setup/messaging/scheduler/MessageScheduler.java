@@ -1,7 +1,7 @@
 package com.mrngwozdz.setup.messaging.scheduler;
 
-import com.mrngwozdz.setup.messaging.config.RabbitMQConfig;
 import com.mrngwozdz.setup.messaging.sender.MessageSender;
+import com.mrngwozdz.setup.properties.RabbitMQProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class MessageScheduler {
 
     private final MessageSender messageSender;
+    private final RabbitMQProperties rabbitMQProperties;
     private final AtomicInteger messageCounter = new AtomicInteger(0);
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -31,20 +32,20 @@ public class MessageScheduler {
 
         // Send Order message
         String orderMessage = String.format("Order #%d created at %s", count, timestamp);
-        log.info("→ Sending ORDER message (routing key: {})", RabbitMQConfig.ORDER_ROUTING_KEY);
-        messageSender.send(RabbitMQConfig.ORDER_ROUTING_KEY, orderMessage);
+        log.info("→ Sending ORDER message (routing key: {})", rabbitMQProperties.getOrder().getRoutingKey());
+        messageSender.send(rabbitMQProperties.getOrder().getRoutingKey(), orderMessage);
         log.info("✓ ORDER message sent");
 
         // Send Notification message
         String notificationMessage = String.format("Notification #%d sent at %s", count, timestamp);
-        log.info("→ Sending NOTIFICATION message (routing key: {})", RabbitMQConfig.NOTIFICATION_ROUTING_KEY);
-        messageSender.send(RabbitMQConfig.NOTIFICATION_ROUTING_KEY, notificationMessage);
+        log.info("→ Sending NOTIFICATION message (routing key: {})", rabbitMQProperties.getNotification().getRoutingKey());
+        messageSender.send(rabbitMQProperties.getNotification().getRoutingKey(), notificationMessage);
         log.info("✓ NOTIFICATION message sent");
 
         // Send Audit message
         String auditMessage = String.format("Audit event #%d logged at %s", count, timestamp);
-        log.info("→ Sending AUDIT message (routing key: {})", RabbitMQConfig.AUDIT_ROUTING_KEY);
-        messageSender.send(RabbitMQConfig.AUDIT_ROUTING_KEY, auditMessage);
+        log.info("→ Sending AUDIT message (routing key: {})", rabbitMQProperties.getAudit().getRoutingKey());
+        messageSender.send(rabbitMQProperties.getAudit().getRoutingKey(), auditMessage);
         log.info("✓ AUDIT message sent");
 
         log.info("════════════════════════════════════════════════════════════════════════════════");

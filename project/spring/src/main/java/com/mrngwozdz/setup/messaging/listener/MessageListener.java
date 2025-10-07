@@ -1,6 +1,6 @@
 package com.mrngwozdz.setup.messaging.listener;
 
-import com.mrngwozdz.setup.messaging.config.RabbitMQConfig;
+import com.mrngwozdz.setup.properties.RabbitMQProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -11,11 +11,16 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class MessageListener {
 
-    @RabbitListener(queues = RabbitMQConfig.ORDER_QUEUE)
+    private final RabbitMQProperties rabbitMQProperties;
+
+    @RabbitListener(
+            queues = "#{rabbitMQProperties.order.name}",
+            containerFactory = "orderListenerContainerFactory"
+    )
     public void handleOrderMessage(String message) {
         log.info("╔══════════════════════════════════════════════════════════════════════════════");
-        log.info("║ ORDER LISTENER - Message received from queue: {}", RabbitMQConfig.ORDER_QUEUE);
-        log.info("║ Routing Key: {}", RabbitMQConfig.ORDER_ROUTING_KEY);
+        log.info("║ ORDER LISTENER - Message received from queue: {}", rabbitMQProperties.getOrder().getName());
+        log.info("║ Routing Key: {}", rabbitMQProperties.getOrder().getRoutingKey());
         log.info("║ Message content: {}", message);
         log.info("╠══════════════════════════════════════════════════════════════════════════════");
         processOrderMessage(message);
@@ -23,11 +28,14 @@ public class MessageListener {
         log.info("╚══════════════════════════════════════════════════════════════════════════════");
     }
 
-    @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_QUEUE)
+    @RabbitListener(
+            queues = "#{rabbitMQProperties.notification.name}",
+            containerFactory = "notificationListenerContainerFactory"
+    )
     public void handleNotificationMessage(String message) {
         log.info("╔══════════════════════════════════════════════════════════════════════════════");
-        log.info("║ NOTIFICATION LISTENER - Message received from queue: {}", RabbitMQConfig.NOTIFICATION_QUEUE);
-        log.info("║ Routing Key: {}", RabbitMQConfig.NOTIFICATION_ROUTING_KEY);
+        log.info("║ NOTIFICATION LISTENER - Message received from queue: {}", rabbitMQProperties.getNotification().getName());
+        log.info("║ Routing Key: {}", rabbitMQProperties.getNotification().getRoutingKey());
         log.info("║ Message content: {}", message);
         log.info("╠══════════════════════════════════════════════════════════════════════════════");
         processNotificationMessage(message);
@@ -35,11 +43,14 @@ public class MessageListener {
         log.info("╚══════════════════════════════════════════════════════════════════════════════");
     }
 
-    @RabbitListener(queues = RabbitMQConfig.AUDIT_QUEUE)
+    @RabbitListener(
+            queues = "#{rabbitMQProperties.audit.name}",
+            containerFactory = "auditListenerContainerFactory"
+    )
     public void handleAuditMessage(String message) {
         log.info("╔══════════════════════════════════════════════════════════════════════════════");
-        log.info("║ AUDIT LISTENER - Message received from queue: {}", RabbitMQConfig.AUDIT_QUEUE);
-        log.info("║ Routing Key: {}", RabbitMQConfig.AUDIT_ROUTING_KEY);
+        log.info("║ AUDIT LISTENER - Message received from queue: {}", rabbitMQProperties.getAudit().getName());
+        log.info("║ Routing Key: {}", rabbitMQProperties.getAudit().getRoutingKey());
         log.info("║ Message content: {}", message);
         log.info("╠══════════════════════════════════════════════════════════════════════════════");
         processAuditMessage(message);
