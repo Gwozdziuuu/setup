@@ -1,0 +1,7 @@
+server:
+  servlet:
+    context-path: /setup
+
+spring:
+  application:
+    name: setup
