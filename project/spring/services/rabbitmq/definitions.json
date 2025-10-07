@@ -32,6 +32,15 @@
       "auto_delete": false,
       "internal": false,
       "arguments": {}
+    },
+    {
+      "name": "setup.direct.exchange.dlx",
+      "vhost": "/",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
     }
   ],
   "queues": [
@@ -51,6 +60,27 @@
     },
     {
       "name": "setup.audit.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "setup.order.queue.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "setup.notification.queue.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "setup.audit.queue.dlq",
       "vhost": "/",
       "durable": true,
       "auto_delete": false,
@@ -80,6 +110,30 @@
       "destination": "setup.audit.queue",
       "destination_type": "queue",
       "routing_key": "audit",
+      "arguments": {}
+    },
+    {
+      "source": "setup.direct.exchange.dlx",
+      "vhost": "/",
+      "destination": "setup.order.queue.dlq",
+      "destination_type": "queue",
+      "routing_key": "setup.order.queue.dlq",
+      "arguments": {}
+    },
+    {
+      "source": "setup.direct.exchange.dlx",
+      "vhost": "/",
+      "destination": "setup.notification.queue.dlq",
+      "destination_type": "queue",
+      "routing_key": "setup.notification.queue.dlq",
+      "arguments": {}
+    },
+    {
+      "source": "setup.direct.exchange.dlx",
+      "vhost": "/",
+      "destination": "setup.audit.queue.dlq",
+      "destination_type": "queue",
+      "routing_key": "setup.audit.queue.dlq",
       "arguments": {}
     }
   ]
