@@ -47,6 +47,7 @@ public class RabbitMQConfig {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
         factory.setMessageConverter(messageConverter);
+        factory.setPrefetchCount(1);
         factory.setMissingQueuesFatal(true);
         factory.setAdviceChain(retryInterceptor);
         factory.setDefaultRequeueRejected(false);
@@ -63,6 +64,7 @@ public class RabbitMQConfig {
         factory.setMessageConverter(messageConverter);
         factory.setConcurrentConsumers(parseConcurrency(listenerProperties.getOrderConcurrency())[0]);
         factory.setMaxConcurrentConsumers(parseConcurrency(listenerProperties.getOrderConcurrency())[1]);
+        factory.setPrefetchCount(1);
         factory.setMissingQueuesFatal(true);
         factory.setAdviceChain(retryInterceptor);
         factory.setDefaultRequeueRejected(false);
@@ -79,6 +81,7 @@ public class RabbitMQConfig {
         factory.setMessageConverter(messageConverter);
         factory.setConcurrentConsumers(parseConcurrency(listenerProperties.getNotificationConcurrency())[0]);
         factory.setMaxConcurrentConsumers(parseConcurrency(listenerProperties.getNotificationConcurrency())[1]);
+        factory.setPrefetchCount(1);
         factory.setMissingQueuesFatal(true);
         factory.setAdviceChain(retryInterceptor);
         factory.setDefaultRequeueRejected(false);
@@ -95,6 +98,7 @@ public class RabbitMQConfig {
         factory.setMessageConverter(messageConverter);
         factory.setConcurrentConsumers(parseConcurrency(listenerProperties.getAuditConcurrency())[0]);
         factory.setMaxConcurrentConsumers(parseConcurrency(listenerProperties.getAuditConcurrency())[1]);
+        factory.setPrefetchCount(1);
         factory.setMissingQueuesFatal(true);
         factory.setAdviceChain(retryInterceptor);
         factory.setDefaultRequeueRejected(false);
@@ -109,11 +113,35 @@ public class RabbitMQConfig {
     @Bean
     public MessageRecoverer messageRecoverer(RabbitTemplate rabbitTemplate) {
         return (message, cause) -> {
-            String queueName = (String) message.getMessageProperties().getHeaders().get("x-original-queue");
+            // Get queue name from consumer queue (where message was consumed from)
+            String queueName = message.getMessageProperties().getConsumerQueue();
+
+            // Fallback: try to get from header (for requeued messages)
+            if (queueName == null || queueName.isBlank()) {
+                queueName = (String) message.getMessageProperties().getHeaders().get("x-original-queue");
+            }
+
+            // Last resort: extract from routing key
+            if (queueName == null || queueName.isBlank()) {
+                String receivedRoutingKey = message.getMessageProperties().getReceivedRoutingKey();
+                if (receivedRoutingKey != null) {
+                    queueName = receivedRoutingKey.replace("routing.", "");
+                }
+            }
+
             String dlqRoutingKey = queueName != null ? queueName + ".dlq" : "unknown.dlq";
 
-            log.error("Message processing failed after {} attempts. Sending to DLQ with routing key: {}. Error: {}",
-                    3, dlqRoutingKey, cause.getMessage(), cause);
+            // Extract root cause message (without full stack trace)
+            String errorMessage = extractRootCauseMessage(cause);
+
+            log.error("Message processing failed after {} attempts. Queue: {}, DLQ routing key: {}, Error: {}",
+                    3, queueName, dlqRoutingKey, errorMessage);
+
+            // Add metadata to message headers
+            message.getMessageProperties().getHeaders().put("x-retry-attempts", 3);
+            message.getMessageProperties().getHeaders().put("x-error", errorMessage);
+            message.getMessageProperties().getHeaders().put("x-original-queue", queueName);
+            message.getMessageProperties().getHeaders().put("x-failed-timestamp", System.currentTimeMillis());
 
             rabbitTemplate.send(
                     rabbitMQProperties.getExchangeName() + ".dlx",
@@ -121,6 +149,14 @@ public class RabbitMQConfig {
                     message
             );
         };
+    }
+
+    private String extractRootCauseMessage(Throwable cause) {
+        Throwable rootCause = cause;
+        while (rootCause.getCause() != null && rootCause.getCause() != rootCause) {
+            rootCause = rootCause.getCause();
+        }
+        return rootCause.getMessage();
     }
 
     @Bean
