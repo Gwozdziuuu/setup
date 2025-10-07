@@ -1,0 +1,86 @@
+{
+  "rabbit_version": "3.13.0",
+  "rabbitmq_version": "3.13.0",
+  "users": [
+    {
+      "name": "setup",
+      "password_hash": "jdkEUVw5bbsi4OI6rDVq18E5+IhI9WNuFUQ0fcGxgOGmuj0Z",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": ["administrator"]
+    }
+  ],
+  "vhosts": [
+    {
+      "name": "/"
+    }
+  ],
+  "permissions": [
+    {
+      "user": "setup",
+      "vhost": "/",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "setup.direct.exchange",
+      "vhost": "/",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "setup.order.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "setup.notification.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "setup.audit.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
+  ],
+  "bindings": [
+    {
+      "source": "setup.direct.exchange",
+      "vhost": "/",
+      "destination": "setup.order.queue",
+      "destination_type": "queue",
+      "routing_key": "order",
+      "arguments": {}
+    },
+    {
+      "source": "setup.direct.exchange",
+      "vhost": "/",
+      "destination": "setup.notification.queue",
+      "destination_type": "queue",
+      "routing_key": "notification",
+      "arguments": {}
+    },
+    {
+      "source": "setup.direct.exchange",
+      "vhost": "/",
+      "destination": "setup.audit.queue",
+      "destination_type": "queue",
+      "routing_key": "audit",
+      "arguments": {}
+    }
+  ]
+}

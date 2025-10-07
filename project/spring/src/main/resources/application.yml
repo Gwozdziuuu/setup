@@ -5,3 +5,39 @@ server:
 spring:
   application:
     name: setup
+
+  datasource:
+    create:
+      jdbc-url: jdbc:postgresql://localhost:5432/setup
+      username: setup
+      password: setup
+    write:
+      jdbc-url: jdbc:postgresql://localhost:5432/setup
+      username: setup
+      password: setup
+      max-connections: 5
+      minimum-idle: 3
+    read:
+      jdbc-url: jdbc:postgresql://localhost:5432/setup
+      username: setup
+      password: setup
+      max-connections: 30
+      minimum-idle: 5
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+    enabled: true
+
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: setup
+    password: setup
