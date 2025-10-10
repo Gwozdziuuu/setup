@@ -14,30 +14,29 @@ import javax.sql.DataSource;
 public class DataSourceConfig {
 
     @Primary
-    @Bean(name = "writeDataSource")
-    public DataSource writeDataSource(
-            @Value("${spring.datasource.write.jdbc-url}") String dbUrl,
-            @Value("${spring.datasource.write.username}") String dbUsername,
-            @Value("${spring.datasource.write.password}") String dbPassword,
-            @Value("${spring.datasource.write.max-connections:5}") int writeMaxConnections,
-            @Value("${spring.datasource.write.minimum-idle:3}") int writeMinimumIdle
+    @Bean(name = "commandDataSource")
+    public DataSource commandDataSource(
+            @Value("${spring.datasource.command.jdbc-url}") String dbUrl,
+            @Value("${spring.datasource.command.username}") String dbUsername,
+            @Value("${spring.datasource.command.password}") String dbPassword,
+            @Value("${spring.datasource.command.max-connections:5}") int commandMaxConnections,
+            @Value("${spring.datasource.command.minimum-idle:3}") int commandMinimumIdle
     ) {
-        return getDataSource("WriteDataBaseConnectionPool", dbUrl, dbUsername, dbPassword, writeMaxConnections, writeMinimumIdle);
+        return getDataSource("CommandDataBaseConnectionPool", dbUrl, dbUsername, dbPassword, commandMaxConnections, commandMinimumIdle, false);
     }
 
-    @Bean(name = "readDataSource")
-    @Qualifier("readDataSource")
-    public DataSource readDataSource(
-            @Value("${spring.datasource.read.jdbc-url}") String dbUrl,
-            @Value("${spring.datasource.read.username}") String dbUsername,
-            @Value("${spring.datasource.read.password}") String dbPassword,
-            @Value("${spring.datasource.read.max-connections:30}") int readMaxConnections,
-            @Value("${spring.datasource.read.minimum-idle:5}") int readMinimumIdle
+    @Bean(name = "queryDataSource")
+    public DataSource queryDataSource(
+            @Value("${spring.datasource.query.jdbc-url}") String dbUrl,
+            @Value("${spring.datasource.query.username}") String dbUsername,
+            @Value("${spring.datasource.query.password}") String dbPassword,
+            @Value("${spring.datasource.query.max-connections:30}") int queryMaxConnections,
+            @Value("${spring.datasource.query.minimum-idle:5}") int queryMinimumIdle
     ) {
-        return getDataSource("ReadDataBaseConnectionPool", dbUrl, dbUsername, dbPassword, readMaxConnections, readMinimumIdle);
+        return getDataSource("QueryDataBaseConnectionPool", dbUrl, dbUsername, dbPassword, queryMaxConnections, queryMinimumIdle, true);
     }
 
-    private DataSource getDataSource(String poolName, String dbUrl, String dbUsername, String dbPassword, int maxConnections, int minimumIdle) {
+    private DataSource getDataSource(String poolName, String dbUrl, String dbUsername, String dbPassword, int maxConnections, int minimumIdle, boolean isReadOnly) {
         int safeMinIdle = Math.min(minimumIdle, maxConnections);
 
         HikariConfig hikariConfig = new HikariConfig();
@@ -54,6 +53,11 @@ public class DataSourceConfig {
         hikariConfig.setMaxLifetime(30L * 60 * 1000);
         hikariConfig.setKeepaliveTime(5L * 60 * 1000);
         hikariConfig.setLeakDetectionThreshold(60L * 1000);
+
+        if (isReadOnly) {
+            hikariConfig.setReadOnly(true);
+            hikariConfig.setAutoCommit(true);
+        }
 
         return new HikariDataSource(hikariConfig);
     }

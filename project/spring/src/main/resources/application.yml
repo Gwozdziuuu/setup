@@ -11,13 +11,13 @@ spring:
       jdbc-url: jdbc:postgresql://localhost:5432/setup
       username: setup
       password: setup
-    write:
+    command:
       jdbc-url: jdbc:postgresql://localhost:5432/setup
       username: setup
       password: setup
       max-connections: 5
       minimum-idle: 3
-    read:
+    query:
       jdbc-url: jdbc:postgresql://localhost:5432/setup
       username: setup
       password: setup
