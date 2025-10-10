@@ -2,7 +2,6 @@ package com.mrngwozdz.setup.database.config;
 
 import com.mrngwozdz.setup.database.entity.DatabaseMarker;
 import com.mrngwozdz.setup.database.entity.security.SecurityDatabaseMarker;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,19 +14,29 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 import javax.sql.DataSource;
 import java.util.Objects;
 
+/**
+ * Configuration for JPA EntityManager and TransactionManager.
+ * Uses a single EntityManagerFactory and TransactionManager that work with
+ * the RoutingDataSource to dynamically route to READ or WRITE DataSource.
+ */
 @Configuration
 @EnableTransactionManagement
 public class EntityManagerConfig {
 
+    /**
+     * Single EntityManagerFactory that uses the RoutingDataSource.
+     * The DataSource routing is handled transparently by DataSourceAspect
+     * based on @ReadOperation or @WriteOperation annotations.
+     */
     @Primary
-    @Bean(name = "commandEntityManagerFactory")
-    public LocalContainerEntityManagerFactoryBean commandEntityManagerFactory(
+    @Bean(name = "entityManagerFactory")
+    public LocalContainerEntityManagerFactoryBean entityManagerFactory(
             EntityManagerFactoryBuilder builder,
-            @Qualifier("commandDataSource") DataSource dataSource) {
+            DataSource dataSource) {
         return builder
-                .dataSource(dataSource)
+                .dataSource(dataSource)  // This is the RoutingDataSource
                 .packages(DatabaseMarker.class.getPackageName(), SecurityDatabaseMarker.class.getPackageName())
-                .persistenceUnit("command")
+                .persistenceUnit("default")
                 .properties(java.util.Map.of(
                         "hibernate.cache.use_second_level_cache", "false",
                         "hibernate.cache.use_query_cache", "false"
@@ -35,27 +44,14 @@ public class EntityManagerConfig {
                 .build();
     }
 
-    @Bean(name = "queryEntityManagerFactory")
-    public LocalContainerEntityManagerFactoryBean queryEntityManagerFactory(
-            EntityManagerFactoryBuilder builder,
-            @Qualifier("queryDataSource") DataSource dataSource) {
-        return builder
-                .dataSource(dataSource)
-                .packages(DatabaseMarker.class.getPackageName(), SecurityDatabaseMarker.class.getPackageName())
-                .persistenceUnit("query")
-                .build();
-    }
-
+    /**
+     * Single TransactionManager that works with the EntityManagerFactory.
+     * The DataSource routing happens automatically based on the current thread context.
+     */
     @Primary
-    @Bean(name = "commandTransactionManager")
-    public PlatformTransactionManager commandTransactionManager(
-            @Qualifier("commandEntityManagerFactory") LocalContainerEntityManagerFactoryBean commandEntityManagerFactoryBean) {
-        return new JpaTransactionManager(Objects.requireNonNull(commandEntityManagerFactoryBean.getObject()));
-    }
-
-    @Bean(name = "queryTransactionManager")
-    public PlatformTransactionManager queryTransactionManager(
-            @Qualifier("queryEntityManagerFactory") LocalContainerEntityManagerFactoryBean queryEntityManagerFactoryBean) {
-        return new JpaTransactionManager(Objects.requireNonNull(queryEntityManagerFactoryBean.getObject()));
+    @Bean(name = "transactionManager")
+    public PlatformTransactionManager transactionManager(
+            LocalContainerEntityManagerFactoryBean entityManagerFactory) {
+        return new JpaTransactionManager(Objects.requireNonNull(entityManagerFactory.getObject()));
     }
 }

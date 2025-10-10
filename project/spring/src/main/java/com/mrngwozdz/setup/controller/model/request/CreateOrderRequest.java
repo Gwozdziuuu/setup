@@ -9,7 +9,6 @@ import java.math.BigDecimal;
 
 import static com.mrngwozdz.setup.controller.model.valdation.OrderValidators.*;
 
-
 @Schema(description = "Request to create a new order")
 public record CreateOrderRequest(
         @Schema(description = "Unique order identifier", example = "ORD-001", requiredMode = Schema.RequiredMode.REQUIRED)

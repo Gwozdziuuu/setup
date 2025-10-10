@@ -2,7 +2,7 @@ package com.mrngwozdz.setup.messaging.listener;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mrngwozdz.setup.database.entity.Order;
-import com.mrngwozdz.setup.database.repository.OrderRepository;
+import com.mrngwozdz.setup.service.order.data.repository.query.OrderQueryRepository;
 import com.mrngwozdz.setup.messaging.model.OrderRequest;
 import com.mrngwozdz.setup.platform.result.ErrorCode;
 import com.mrngwozdz.setup.platform.result.Failure;
@@ -25,7 +25,7 @@ import java.time.LocalDateTime;
 public class MessageListener {
 
     private final RabbitMQProperties rabbitMQProperties;
-    private final OrderRepository orderRepository;
+    private final OrderQueryRepository orderRepository;
     private final ExternalApiService externalApiService;
     private final ObjectMapper objectMapper;
 

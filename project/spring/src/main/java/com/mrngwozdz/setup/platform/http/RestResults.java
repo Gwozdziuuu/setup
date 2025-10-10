@@ -5,7 +5,9 @@ import com.mrngwozdz.setup.platform.result.Success;
 import io.vavr.control.Either;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.function.Function;
 
 public final class RestResults {
@@ -34,18 +36,33 @@ public final class RestResults {
         return ResponseEntity.status(status).body(problem);
     }
 
-    public static <T> ResponseEntity<Object> from(Either<Failure, Success<T>> e) {
-        return e.fold(
-                RestResults::toResponse,
-                success -> ResponseEntity.ok(success.value())
-        );
-    }
-
     @SuppressWarnings("unchecked")
     public static <T, R> ResponseEntity<R> toResponseEntity(Either<Failure, T> either, Function<T, R> mapper) {
         return either.fold(
                 failure -> (ResponseEntity<R>) toResponse(failure),
                 success -> ResponseEntity.ok(mapper.apply(success))
+        );
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T, R> ResponseEntity<R> toCreatedResponseEntity(
+            Either<Failure, T> either,
+            Function<T, R> responseMapper,
+            Function<T, Object> idExtractor
+    ) {
+        return either.fold(
+                failure -> (ResponseEntity<R>) toResponse(failure),
+                success -> {
+                    Object id = idExtractor.apply(success);
+                    URI location = ServletUriComponentsBuilder
+                            .fromCurrentRequest()
+                            .path("/{id}")
+                            .buildAndExpand(id)
+                            .toUri();
+                    return ResponseEntity
+                            .created(location)
+                            .body(responseMapper.apply(success));
+                }
         );
     }
 }
