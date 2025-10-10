@@ -73,7 +73,7 @@ public interface OrderApi {
             }
     )
     @PostMapping("/orders")
-    ResponseEntity<CreateOrderResponse> createOrder(
+    ResponseEntity<?> createOrder(
             @Parameter(description = "Order creation request", required = true)
             @RequestBody CreateOrderRequest request
     );

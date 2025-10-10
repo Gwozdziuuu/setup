@@ -44,25 +44,4 @@ public final class RestResults {
         );
     }
 
-    @SuppressWarnings("unchecked")
-    public static <T, R> ResponseEntity<R> toCreatedResponseEntity(
-            Either<Failure, T> either,
-            Function<T, R> responseMapper,
-            Function<T, Object> idExtractor
-    ) {
-        return either.fold(
-                failure -> (ResponseEntity<R>) toResponse(failure),
-                success -> {
-                    Object id = idExtractor.apply(success);
-                    URI location = ServletUriComponentsBuilder
-                            .fromCurrentRequest()
-                            .path("/{id}")
-                            .buildAndExpand(id)
-                            .toUri();
-                    return ResponseEntity
-                            .created(location)
-                            .body(responseMapper.apply(success));
-                }
-        );
-    }
 }

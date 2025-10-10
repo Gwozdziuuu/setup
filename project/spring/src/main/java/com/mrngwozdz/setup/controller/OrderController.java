@@ -10,14 +10,14 @@ import com.mrngwozdz.setup.platform.http.RestResults;
 import com.mrngwozdz.setup.service.order.business.OrderBusiness;
 import io.micrometer.core.annotation.Timed;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-import static com.mrngwozdz.setup.platform.http.RestResults.toCreatedResponseEntity;
-import static com.mrngwozdz.setup.platform.http.RestResults.toResponseEntity;
+import static com.mrngwozdz.setup.platform.http.RestResults.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -43,12 +43,13 @@ public class OrderController implements OrderApi {
 
     @Override
     @Timed(value = "orders.create", description = "Time taken to create a new order")
-    public ResponseEntity<CreateOrderResponse> createOrder(CreateOrderRequest request) {
-        return toCreatedResponseEntity(
-                business.createOrder(request),
-                order -> new CreateOrderResponse(order.getOrderId()),
-                Order::getOrderId
-        );
+    public ResponseEntity<?> createOrder(CreateOrderRequest request) {
+        return business.createOrder(request)
+                .fold(
+                        RestResults::toResponse,
+                        order -> ResponseEntity.status(HttpStatus.CREATED)
+                                .body(new CreateOrderResponse(order.getOrderId()))
+                );
     }
 
     @Override
@@ -69,7 +70,7 @@ public class OrderController implements OrderApi {
         return business.deleteOrder(orderId)
                 .fold(
                         failure -> {
-                            var response = RestResults.toResponse(failure);
+                            var response = toResponse(failure);
                             return ResponseEntity.status(response.getStatusCode()).build();
                         },
                         success -> ResponseEntity.noContent().build()
