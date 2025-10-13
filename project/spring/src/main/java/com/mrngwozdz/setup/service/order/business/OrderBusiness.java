@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 
 import java.util.List;
 
@@ -31,6 +32,7 @@ public class OrderBusiness {
 
     private final OrderQuery orderQuery;
     private final OrderCommand orderCommand;
+    private final OrderBusiness self;  // Self-injection for internal method calls to use Spring proxy
 
     /**
      * Retrieves all orders from the database.
@@ -66,6 +68,7 @@ public class OrderBusiness {
                 .flatMap(h -> orderCommand.create(h.getCreateOrder()).map(h::setCreatedOrder));
         if (result.isLeft()) {
             log.error("Create order failed with request: {}, process: {}", request, helper);
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
         }
         return result.map(CreateOrderHelper::getCreatedOrder);
     }
@@ -84,6 +87,7 @@ public class OrderBusiness {
                 .flatMap(h -> orderCommand.update(h.getOrderId(), h.getValidatedUpdateOrderRequest()).map(h::setUpdatedOrder));
         if (result.isLeft()) {
             log.error("Update order failed with orderId: {}, request: {}, process: {}", orderId, request, helper);
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
         }
         return result.map(UpdateOrderHelper::getUpdatedOrder);
     }
@@ -92,10 +96,8 @@ public class OrderBusiness {
      * Partially updates an existing order.
      * Uses WRITE DataSource for command operations.
      */
-    @WriteOperation
-    @Transactional
     public Either<Failure, Order> patchOrder(String orderId, UpdateOrderRequest request) {
-        return updateOrder(orderId, request);
+        return self.updateOrder(orderId, request);
     }
 
     /**
