@@ -10,6 +10,8 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -50,7 +52,7 @@ public interface OrderApi {
     @GetMapping("/orders/{orderId}")
     ResponseEntity<OrderResponse> getOrderById(
             @Parameter(description = "Order ID", required = true)
-            @PathVariable String orderId
+            @PathVariable @NotBlank String orderId
     );
 
     @Operation(
@@ -73,9 +75,9 @@ public interface OrderApi {
             }
     )
     @PostMapping("/orders")
-    ResponseEntity<?> createOrder(
+    ResponseEntity<CreateOrderResponse> createOrder(
             @Parameter(description = "Order creation request", required = true)
-            @RequestBody CreateOrderRequest request
+            @RequestBody @Valid CreateOrderRequest request
     );
 
     @Operation(
@@ -83,9 +85,8 @@ public interface OrderApi {
             description = "Updates all fields of an existing order",
             responses = {
                     @ApiResponse(
-                            responseCode = "200",
-                            description = "Order updated successfully",
-                            content = @Content(schema = @Schema(implementation = OrderResponse.class))
+                            responseCode = "204",
+                            description = "Order updated successfully"
                     ),
                     @ApiResponse(
                             responseCode = "404",
@@ -98,11 +99,11 @@ public interface OrderApi {
             }
     )
     @PutMapping("/orders/{orderId}")
-    ResponseEntity<OrderResponse> updateOrder(
+    ResponseEntity<Void> updateOrder(
             @Parameter(description = "Order ID", required = true)
-            @PathVariable String orderId,
+            @PathVariable @NotBlank String orderId,
             @Parameter(description = "Order update request", required = true)
-            @RequestBody UpdateOrderRequest request
+            @RequestBody @Valid UpdateOrderRequest request
     );
 
     @Operation(
@@ -110,9 +111,8 @@ public interface OrderApi {
             description = "Updates specific fields of an existing order",
             responses = {
                     @ApiResponse(
-                            responseCode = "200",
-                            description = "Order updated successfully",
-                            content = @Content(schema = @Schema(implementation = OrderResponse.class))
+                            responseCode = "204",
+                            description = "Order updated successfully"
                     ),
                     @ApiResponse(
                             responseCode = "404",
@@ -125,11 +125,11 @@ public interface OrderApi {
             }
     )
     @PatchMapping("/orders/{orderId}")
-    ResponseEntity<OrderResponse> patchOrder(
+    ResponseEntity<Void> patchOrder(
             @Parameter(description = "Order ID", required = true)
-            @PathVariable String orderId,
+            @PathVariable @NotBlank String orderId,
             @Parameter(description = "Partial order update request", required = true)
-            @RequestBody UpdateOrderRequest request
+            @RequestBody @Valid UpdateOrderRequest request
     );
 
     @Operation(
@@ -149,7 +149,7 @@ public interface OrderApi {
     @DeleteMapping("/orders/{orderId}")
     ResponseEntity<Void> deleteOrder(
             @Parameter(description = "Order ID", required = true)
-            @PathVariable String orderId
+            @PathVariable @NotBlank String orderId
     );
 
 }
