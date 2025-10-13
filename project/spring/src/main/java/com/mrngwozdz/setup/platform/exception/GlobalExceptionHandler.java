@@ -16,6 +16,7 @@ import java.util.Map;
 /**
  * Global exception handler that catches unexpected exceptions not handled by the functional Either pattern.
  * This serves as a safety net for:
+ * - BusinessException (functional Either converted to exception flow)
  * - Unexpected runtime exceptions
  * - Spring framework exceptions (validation, deserialization, etc.)
  * - Any other unhandled exceptions that escape the business layer
@@ -23,6 +24,15 @@ import java.util.Map;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    /**
+     * Handles BusinessException thrown by controllers when converting functional Either to exception flow.
+     * This enables clean controller code with proper type safety while maintaining functional Either in business layer.
+     */
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ResponseProblem> handleBusinessException(BusinessException ex) {
+        return com.mrngwozdz.setup.platform.http.RestResults.toResponse(ex.getFailure());
+    }
 
     /**
      * Handles all unexpected exceptions that are not caught by the application logic.

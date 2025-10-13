@@ -4,21 +4,20 @@ import com.mrngwozdz.setup.controller.api.OrderApi;
 import com.mrngwozdz.setup.controller.model.request.CreateOrderRequest;
 import com.mrngwozdz.setup.controller.model.request.UpdateOrderRequest;
 import com.mrngwozdz.setup.controller.model.response.CreateOrderResponse;
+import com.mrngwozdz.setup.controller.model.response.GetAllOrdersResponse;
 import com.mrngwozdz.setup.controller.model.response.OrderResponse;
-import com.mrngwozdz.setup.database.entity.Order;
-import com.mrngwozdz.setup.platform.http.RestResults;
 import com.mrngwozdz.setup.service.order.business.OrderBusiness;
 import io.micrometer.core.annotation.Timed;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import static com.mrngwozdz.setup.platform.http.RestResults.unwrapOrThrow;
 
-import static com.mrngwozdz.setup.platform.http.RestResults.*;
-
+@Validated
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(value = "/")
@@ -28,52 +27,46 @@ public class OrderController implements OrderApi {
 
     @Override
     @Timed(value = "orders.get.all", description = "Time taken to retrieve all orders")
-    public ResponseEntity<List<OrderResponse>> getAllOrders() {
-        return toResponseEntity(
-                business.getAllOrders(),
-                orders -> orders.stream().map(OrderResponse::from).toList()
-        );
+    public ResponseEntity<GetAllOrdersResponse> getAllOrders() {
+        var result = unwrapOrThrow(business.getAllOrders(), GetAllOrdersResponse::from);
+        return ResponseEntity.ok(result);
     }
 
     @Override
     @Timed(value = "orders.get.by.id", description = "Time taken to retrieve an order by ID")
     public ResponseEntity<OrderResponse> getOrderById(String orderId) {
-        return toResponseEntity(business.getOrderById(orderId), OrderResponse::from);
+        var order = unwrapOrThrow(business.getOrderById(orderId), OrderResponse::from);
+        return ResponseEntity.ok(order);
     }
 
     @Override
     @Timed(value = "orders.create", description = "Time taken to create a new order")
-    public ResponseEntity<?> createOrder(CreateOrderRequest request) {
-        return business.createOrder(request)
-                .fold(
-                        RestResults::toResponse,
-                        order -> ResponseEntity.status(HttpStatus.CREATED)
-                                .body(new CreateOrderResponse(order.getOrderId()))
-                );
+    public ResponseEntity<CreateOrderResponse> createOrder(CreateOrderRequest request) {
+        var response = unwrapOrThrow(
+                business.createOrder(request),
+                order -> new CreateOrderResponse(order.getOrderId())
+        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @Override
     @Timed(value = "orders.update", description = "Time taken to update an order")
-    public ResponseEntity<OrderResponse> updateOrder(String orderId, UpdateOrderRequest request) {
-        return toResponseEntity(business.updateOrder(orderId, request), OrderResponse::from);
+    public ResponseEntity<Void> updateOrder(String orderId, UpdateOrderRequest request) {
+        unwrapOrThrow(business.updateOrder(orderId, request));
+        return ResponseEntity.noContent().build();
     }
 
     @Override
     @Timed(value = "orders.patch", description = "Time taken to patch an order")
-    public ResponseEntity<OrderResponse> patchOrder(String orderId, UpdateOrderRequest request) {
-        return toResponseEntity(business.patchOrder(orderId, request), OrderResponse::from);
+    public ResponseEntity<Void> patchOrder(String orderId, UpdateOrderRequest request) {
+        unwrapOrThrow(business.patchOrder(orderId, request));
+        return ResponseEntity.noContent().build();
     }
 
     @Override
     @Timed(value = "orders.delete", description = "Time taken to delete an order")
     public ResponseEntity<Void> deleteOrder(String orderId) {
-        return business.deleteOrder(orderId)
-                .fold(
-                        failure -> {
-                            var response = toResponse(failure);
-                            return ResponseEntity.status(response.getStatusCode()).build();
-                        },
-                        success -> ResponseEntity.noContent().build()
-                );
+        unwrapOrThrow(business.deleteOrder(orderId));
+        return ResponseEntity.noContent().build();
     }
 }

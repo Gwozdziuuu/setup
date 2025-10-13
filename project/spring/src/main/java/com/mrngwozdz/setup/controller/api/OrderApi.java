@@ -3,6 +3,7 @@ package com.mrngwozdz.setup.controller.api;
 import com.mrngwozdz.setup.controller.model.request.CreateOrderRequest;
 import com.mrngwozdz.setup.controller.model.request.UpdateOrderRequest;
 import com.mrngwozdz.setup.controller.model.response.CreateOrderResponse;
+import com.mrngwozdz.setup.controller.model.response.GetAllOrdersResponse;
 import com.mrngwozdz.setup.controller.model.response.OrderResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -27,12 +28,12 @@ public interface OrderApi {
                     @ApiResponse(
                             responseCode = "200",
                             description = "Success",
-                            content = @Content(schema = @Schema(implementation = OrderResponse.class))
+                            content = @Content(schema = @Schema(implementation = GetAllOrdersResponse.class))
                     )
             }
     )
     @GetMapping("/orders")
-    ResponseEntity<List<OrderResponse>> getAllOrders();
+    ResponseEntity<GetAllOrdersResponse> getAllOrders();
 
     @Operation(
             summary = "Get order by ID",

@@ -7,6 +7,7 @@ import com.mrngwozdz.setup.database.config.datasource.WriteOperation;
 import com.mrngwozdz.setup.database.entity.Order;
 import com.mrngwozdz.setup.platform.result.Failure;
 import com.mrngwozdz.setup.service.order.business.createorder.CreateOrderHelper;
+import com.mrngwozdz.setup.service.order.business.updateorder.UpdateOrderHelper;
 import com.mrngwozdz.setup.service.order.data.impl.OrderCommand;
 import com.mrngwozdz.setup.service.order.data.impl.OrderQuery;
 import com.mrngwozdz.setup.service.order.mapper.OrderRequestMapper;
@@ -54,7 +55,6 @@ public class OrderBusiness {
     /**
      * Creates a new order.
      * Uses WRITE DataSource for command operations.
-     * This ensures atomicity of the existence check and insert within a single transaction.
      */
     @WriteOperation
     @Transactional
@@ -77,7 +77,15 @@ public class OrderBusiness {
     @WriteOperation
     @Transactional
     public Either<Failure, Order> updateOrder(String orderId, UpdateOrderRequest request) {
-        return orderCommand.update(orderId, request);
+        var helper = new UpdateOrderHelper();
+        var result = Either.<Failure, UpdateOrderHelper>right(helper.setOrderId(orderId))
+                .flatMap(h -> request.validate().map(h::setValidatedUpdateOrderRequest))
+                .flatMap(h -> orderQuery.findById(h.getOrderId()).map(h::setExistingOrder))
+                .flatMap(h -> orderCommand.update(h.getOrderId(), h.getValidatedUpdateOrderRequest()).map(h::setUpdatedOrder));
+        if (result.isLeft()) {
+            log.error("Update order failed with orderId: {}, request: {}, process: {}", orderId, request, helper);
+        }
+        return result.map(UpdateOrderHelper::getUpdatedOrder);
     }
 
     /**

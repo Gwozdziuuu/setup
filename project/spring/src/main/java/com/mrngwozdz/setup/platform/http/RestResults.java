@@ -1,5 +1,6 @@
 package com.mrngwozdz.setup.platform.http;
 
+import com.mrngwozdz.setup.platform.exception.BusinessException;
 import com.mrngwozdz.setup.platform.result.Failure;
 import com.mrngwozdz.setup.platform.result.Success;
 import io.vavr.control.Either;
@@ -17,7 +18,7 @@ public final class RestResults {
         return ResponseEntity.ok(s.value());
     }
 
-    public static ResponseEntity<Object> toResponse(Failure f) {
+    public static ResponseEntity<ResponseProblem> toResponse(Failure f) {
         HttpStatus status = switch (f.code()) {
             case VALIDATION -> HttpStatus.BAD_REQUEST;
             case NOT_FOUND  -> HttpStatus.NOT_FOUND;
@@ -42,6 +43,31 @@ public final class RestResults {
                 failure -> (ResponseEntity<R>) toResponse(failure),
                 success -> ResponseEntity.ok(mapper.apply(success))
         );
+    }
+
+    /**
+     * Unwraps Either or throws BusinessException if Left.
+     * Use this in controllers to convert functional Either to exception-based flow.
+     *
+     * @param either The Either to unwrap
+     * @return The value from Right side
+     * @throws BusinessException if Either is Left
+     */
+    public static <T> T unwrapOrThrow(Either<Failure, T> either) {
+        return either.getOrElseThrow(BusinessException::new);
+    }
+
+    /**
+     * Unwraps Either, maps the success value, or throws BusinessException if Left.
+     * Use this in controllers to convert functional Either to exception-based flow with mapping.
+     *
+     * @param either The Either to unwrap
+     * @param mapper Function to map the success value
+     * @return The mapped value from Right side
+     * @throws BusinessException if Either is Left
+     */
+    public static <T, R> R unwrapOrThrow(Either<Failure, T> either, Function<T, R> mapper) {
+        return either.map(mapper).getOrElseThrow(BusinessException::new);
     }
 
 }
