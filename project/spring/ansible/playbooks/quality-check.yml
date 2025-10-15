@@ -1,0 +1,69 @@
+---
+- name: Code quality checks
+  hosts: localhost
+  vars:
+    project_dir: "{{ playbook_dir }}/../../"
+    maven_wrapper: "./mvnw"
+    run_checkstyle: true
+    run_spotbugs: false
+    run_pmd: false
+    compile_first: false  # Niektóre narzędzia (np. SpotBugs) wymagają skompilowanego kodu
+
+  tasks:
+    - name: Display quality check information
+      ansible.builtin.debug:
+        msg: "Running code quality checks in {{ project_dir }}"
+
+    - name: Compile code if needed (for tools like SpotBugs)
+      ansible.builtin.command:
+        cmd: "{{ maven_wrapper }} compile -DskipTests"
+        chdir: "{{ project_dir }}"
+      register: compile_result
+      changed_when: true
+      when: compile_first
+
+    - name: Run Checkstyle
+      ansible.builtin.command:
+        cmd: "{{ maven_wrapper }} checkstyle:check"
+        chdir: "{{ project_dir }}"
+      register: checkstyle_result
+      changed_when: true
+      ignore_errors: true
+      when: run_checkstyle
+
+    - name: Display Checkstyle result
+      ansible.builtin.debug:
+        msg: "Checkstyle: {{ 'PASSED' if checkstyle_result.rc == 0 else 'FAILED' }}"
+      when: run_checkstyle
+
+    - name: Run SpotBugs
+      ansible.builtin.command:
+        cmd: "{{ maven_wrapper }} spotbugs:check"
+        chdir: "{{ project_dir }}"
+      register: spotbugs_result
+      changed_when: true
+      ignore_errors: true
+      when: run_spotbugs
+
+    - name: Display SpotBugs result
+      ansible.builtin.debug:
+        msg: "SpotBugs: {{ 'PASSED' if spotbugs_result.rc == 0 else 'FAILED' }}"
+      when: run_spotbugs
+
+    - name: Run PMD
+      ansible.builtin.command:
+        cmd: "{{ maven_wrapper }} pmd:check"
+        chdir: "{{ project_dir }}"
+      register: pmd_result
+      changed_when: true
+      ignore_errors: true
+      when: run_pmd
+
+    - name: Display PMD result
+      ansible.builtin.debug:
+        msg: "PMD: {{ 'PASSED' if pmd_result.rc == 0 else 'FAILED' }}"
+      when: run_pmd
+
+    - name: Summarize quality checks
+      ansible.builtin.debug:
+        msg: "Quality checks completed. Review results above."

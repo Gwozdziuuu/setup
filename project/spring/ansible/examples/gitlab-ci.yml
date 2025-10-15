@@ -1,0 +1,133 @@
+# Przykładowy plik .gitlab-ci.yml wykorzystujący playbooki Ansible
+# Skopiuj ten plik do głównego katalogu projektu jako .gitlab-ci.yml
+
+variables:
+  JAVA_VERSION: "21"
+  ANSIBLE_VERSION: "2.15"
+  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
+
+# Cache dla zależności
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - .m2/repository
+    - target/
+
+# Etapy pipeline
+stages:
+  - setup
+  - build
+  - test
+  - quality
+  - package
+  - docker
+
+# Szablon dla zadań wykorzystujących Ansible
+.ansible-job:
+  image: python:3.11
+  before_script:
+    - pip install "ansible==${ANSIBLE_VERSION}.*"
+    - cd ansible
+    - ansible-galaxy collection install -r requirements.yml
+    - cd ..
+  tags:
+    - docker
+
+# Setup - instalacja zależności
+setup:
+  extends: .ansible-job
+  stage: setup
+  script:
+    - echo "Environment setup completed"
+  only:
+    - branches
+
+# Build - budowanie projektu
+build:
+  extends: .ansible-job
+  stage: build
+  script:
+    - cd ansible
+    - ansible-playbook playbooks/build.yml -e "skip_tests=true"
+  artifacts:
+    paths:
+      - target/classes/
+    expire_in: 1 hour
+  only:
+    - branches
+
+# Test - uruchamianie testów
+test:
+  extends: .ansible-job
+  stage: test
+  script:
+    - cd ansible
+    - ansible-playbook playbooks/test.yml
+  artifacts:
+    when: always
+    reports:
+      junit: target/surefire-reports/TEST-*.xml
+    paths:
+      - target/surefire-reports/
+    expire_in: 1 week
+  only:
+    - branches
+
+# Quality - sprawdzanie jakości kodu
+quality-check:
+  extends: .ansible-job
+  stage: quality
+  script:
+    - cd ansible
+    - ansible-playbook playbooks/quality-check.yml -e "run_checkstyle=true"
+  allow_failure: true
+  only:
+    - branches
+
+# Package - pakowanie aplikacji
+package:
+  extends: .ansible-job
+  stage: package
+  script:
+    - cd ansible
+    - ansible-playbook playbooks/package.yml -e "skip_tests=true"
+  artifacts:
+    paths:
+      - target/*.jar
+    expire_in: 1 month
+  only:
+    - main
+    - develop
+    - tags
+
+# Docker - budowanie obrazu Docker
+docker-build:
+  extends: .ansible-job
+  stage: docker
+  services:
+    - docker:dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  script:
+    - cd ansible
+    - |
+      ansible-playbook playbooks/docker-build.yml \
+        -e "image_name=${CI_PROJECT_NAME}" \
+        -e "image_tag=${CI_COMMIT_SHORT_SHA}" \
+        -e "push_image=true" \
+        -e "registry=${CI_REGISTRY}"
+  only:
+    - main
+    - tags
+  when: manual
+
+# Pipeline dla merge requests
+test-mr:
+  extends: .ansible-job
+  stage: test
+  script:
+    - cd ansible
+    - ansible-playbook playbooks/ci-pipeline.yml -e "skip_tests=false" -e "build_docker=false"
+  only:
+    - merge_requests

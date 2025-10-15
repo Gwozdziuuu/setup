@@ -1,0 +1,49 @@
+---
+- name: Package application
+  hosts: localhost
+  vars:
+    project_dir: "{{ playbook_dir }}/../../"
+    maven_wrapper: "./mvnw"
+    package_goals: "package"
+    skip_tests: true
+    artifact_dir: "{{ project_dir }}/target"
+
+  tasks:
+    - name: Display package information
+      ansible.builtin.debug:
+        msg: "Packaging application in {{ project_dir }}"
+
+    - name: Package application with Maven
+      ansible.builtin.command:
+        cmd: "{{ maven_wrapper }} {{ package_goals }} {{ '-DskipTests' if skip_tests else '' }}"
+        chdir: "{{ project_dir }}"
+      register: package_result
+      changed_when: true
+
+    - name: Find generated artifacts
+      ansible.builtin.find:
+        paths: "{{ artifact_dir }}"
+        patterns: "*.jar"
+        excludes: "*-sources.jar,*-javadoc.jar"
+      register: artifacts
+
+    - name: Display artifacts
+      ansible.builtin.debug:
+        msg: "Generated artifacts: {{ artifacts.files | map(attribute='path') | list }}"
+      when: artifacts.matched > 0
+
+    - name: Fail if no artifacts found
+      ansible.builtin.fail:
+        msg: "No artifacts found in {{ artifact_dir }}"
+      when: artifacts.matched == 0
+
+    - name: Get artifact info
+      ansible.builtin.stat:
+        path: "{{ artifacts.files[0].path }}"
+      register: artifact_stat
+      when: artifacts.matched > 0
+
+    - name: Display artifact size
+      ansible.builtin.debug:
+        msg: "Artifact size: {{ (artifact_stat.stat.size / 1024 / 1024) | round(2) }} MB"
+      when: artifacts.matched > 0 and artifact_stat.stat is defined

@@ -1,0 +1,43 @@
+---
+- name: Run tests
+  hosts: localhost
+  vars:
+    project_dir: "{{ playbook_dir }}/../../"
+    maven_wrapper: "./mvnw"
+    test_goals: "test"
+    coverage_enabled: true
+
+  tasks:
+    - name: Display test information
+      ansible.builtin.debug:
+        msg: "Running tests in {{ project_dir }}"
+
+    - name: Run Maven tests
+      ansible.builtin.command:
+        cmd: "{{ maven_wrapper }} {{ test_goals }}"
+        chdir: "{{ project_dir }}"
+      register: test_result
+      changed_when: true
+      ignore_errors: true
+
+    - name: Check test results
+      ansible.builtin.fail:
+        msg: "Tests failed! Please check the output above."
+      when: test_result.rc != 0
+
+    - name: Display test summary
+      ansible.builtin.debug:
+        msg: "All tests passed successfully!"
+      when: test_result.rc == 0
+
+    - name: Find test reports
+      ansible.builtin.find:
+        paths: "{{ project_dir }}/target/surefire-reports"
+        patterns: "*.xml"
+      register: test_reports
+      when: test_result.rc == 0
+
+    - name: Display test reports location
+      ansible.builtin.debug:
+        msg: "Test reports available at: {{ project_dir }}/target/surefire-reports"
+      when: test_reports.matched | default(0) > 0

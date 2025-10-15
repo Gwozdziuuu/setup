@@ -1,0 +1,40 @@
+---
+- name: Build Maven project
+  hosts: localhost
+  vars:
+    project_dir: "{{ playbook_dir }}/../../"
+    maven_wrapper: "./mvnw"
+    maven_goals: "clean compile"
+    skip_tests: true
+
+  tasks:
+    - name: Display build information
+      ansible.builtin.debug:
+        msg: "Building project in {{ project_dir }}"
+
+    - name: Check if Maven wrapper exists
+      ansible.builtin.stat:
+        path: "{{ project_dir }}/{{ maven_wrapper }}"
+      register: mvnw_stat
+
+    - name: Fail if Maven wrapper not found
+      ansible.builtin.fail:
+        msg: "Maven wrapper not found at {{ project_dir }}/{{ maven_wrapper }}"
+      when: not mvnw_stat.stat.exists
+
+    - name: Make Maven wrapper executable
+      ansible.builtin.file:
+        path: "{{ project_dir }}/{{ maven_wrapper }}"
+        mode: '0755'
+
+    - name: Run Maven build
+      ansible.builtin.command:
+        cmd: "{{ maven_wrapper }} {{ maven_goals }} {{ '-DskipTests' if skip_tests else '' }}"
+        chdir: "{{ project_dir }}"
+      register: build_result
+      changed_when: true
+
+    - name: Display build result
+      ansible.builtin.debug:
+        msg: "Build completed successfully"
+      when: build_result.rc == 0

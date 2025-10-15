@@ -1,0 +1,68 @@
+# Multi-stage Dockerfile dla aplikacji Spring Boot
+# Ten Dockerfile buduje aplikację od zera w kontenerze
+
+# ============================================
+# Stage 1: Build
+# ============================================
+FROM maven:3.9-eclipse-temurin-21-alpine AS builder
+
+# Build arg dla kontrolowania testów
+ARG SKIP_TESTS=true
+
+WORKDIR /app
+
+# Kopiuj pliki Maven wrapper
+COPY .mvn/ .mvn/
+COPY mvnw pom.xml ./
+
+# Pobierz zależności (wykorzystanie cache Docker layer)
+RUN ./mvnw dependency:go-offline -B
+
+# Kopiuj kod źródłowy
+COPY src ./src
+
+# Zbuduj aplikację
+# SKIP_TESTS=true gdy testy już były uruchomione w CI (szybszy build, artefakty w CI)
+# SKIP_TESTS=false gdy chcemy przetestować w kontenerze (pełna izolacja)
+RUN if [ "$SKIP_TESTS" = "true" ]; then \
+        echo "Building with -DskipTests (tests run in CI)" && \
+        ./mvnw package -B -DskipTests; \
+    else \
+        echo "Building with tests" && \
+        ./mvnw package -B; \
+    fi
+
+# Rozpakuj JAR dla lepszej wydajności (Spring Boot layered JARs)
+RUN mkdir -p target/dependency && \
+    (cd target/dependency; jar -xf ../*.jar)
+
+# ============================================
+# Stage 2: Runtime
+# ============================================
+FROM eclipse-temurin:21-jre-alpine
+
+WORKDIR /app
+
+# Dodaj użytkownika non-root dla bezpieczeństwa
+RUN addgroup -S spring && adduser -S spring -G spring
+USER spring:spring
+
+# Kopiuj warstwy aplikacji z builder stage
+# Spring Boot layered JARs pozwalają na lepsze wykorzystanie cache
+COPY --from=builder /app/target/dependency/BOOT-INF/lib /app/lib
+COPY --from=builder /app/target/dependency/META-INF /app/META-INF
+COPY --from=builder /app/target/dependency/BOOT-INF/classes /app
+
+# Expose port (Spring Boot domyślnie 8080)
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1
+
+# Uruchom aplikację
+ENTRYPOINT ["java", "-cp", "/app:/app/lib/*", "com.example.demo.DemoApplication"]
+
+# Dodatkowe opcje JVM (opcjonalne, można nadpisać)
+# ENV JAVA_OPTS="-Xms256m -Xmx512m"
+# ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -cp /app:/app/lib/* com.example.demo.DemoApplication"]

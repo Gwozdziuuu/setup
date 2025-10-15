@@ -1,0 +1,51 @@
+---
+- name: Complete CI Pipeline
+  hosts: localhost
+  vars:
+    project_dir: "{{ playbook_dir }}/../../"
+    run_quality_checks: true
+    build_docker: false
+    skip_tests: false
+    docker_multistage: true  # Jeśli true, Docker sam buduje JAR (bardziej efektywne)
+
+  tasks:
+    - name: Pipeline started
+      ansible.builtin.debug:
+        msg: |
+          Starting CI pipeline for project at {{ project_dir }}
+          - Quality checks: {{ run_quality_checks }}
+          - Build Docker: {{ build_docker }}
+          - Docker multi-stage: {{ docker_multistage }}
+          - Skip tests: {{ skip_tests }}
+
+    # Krok 1: Statyczna analiza kodu (działa na źródłach, szybka)
+    - name: Step 1 - Quality checks (static analysis)
+      ansible.builtin.import_playbook: quality-check.yml
+      when: run_quality_checks
+
+    # Krok 2: Testy
+    # Uruchamiamy testy PRZED Docker buildem aby mieć artefakty w CI (raporty, coverage)
+    # Docker potem zbuduje bez testów (szybciej i bez duplikacji)
+    - name: Step 2 - Run tests
+      ansible.builtin.import_playbook: test.yml
+      when: not skip_tests
+
+    # Krok 3: Pakowanie (tylko jeśli nie używamy Docker multi-stage)
+    # Docker multi-stage sam spakuje aplikację w środku
+    - name: Step 3 - Package application
+      ansible.builtin.import_playbook: package.yml
+      when: not (build_docker and docker_multistage)
+
+    # Krok 4: Build Docker
+    # Jeśli docker_multistage=true: buduje w kontenerze ALE z -DskipTests (bo już przetestowane w Step 2)
+    # Jeśli docker_multistage=false: kopiuje gotowy JAR z Step 3
+    - name: Step 4 - Build Docker image
+      ansible.builtin.import_playbook: docker-build.yml
+      vars:
+        use_multistage: "{{ docker_multistage }}"
+        skip_tests_in_docker: "{{ not skip_tests }}"  # Jeśli już testowaliśmy w Step 2, skip w Dockerze
+      when: build_docker
+
+    - name: Pipeline completed
+      ansible.builtin.debug:
+        msg: "CI pipeline completed successfully!"

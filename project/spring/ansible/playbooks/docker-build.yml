@@ -1,0 +1,82 @@
+---
+- name: Build Docker image
+  hosts: localhost
+  vars:
+    project_dir: "{{ playbook_dir }}/../../"
+    image_name: "spring-app"
+    image_tag: "latest"
+    use_multistage: true  # true = multi-stage Dockerfile, false = prosty Dockerfile
+    dockerfile_path: "{{ project_dir }}/{{ 'Dockerfile.multistage' if use_multistage else 'Dockerfile' }}"
+    skip_tests_in_docker: true  # Jeśli true, Docker build pomija testy (przydatne gdy testy już w CI)
+    build_args: "{{ {'SKIP_TESTS': 'true' if skip_tests_in_docker else 'false'} if use_multistage else {} }}"
+    push_image: false
+    registry: ""
+
+  tasks:
+    - name: Display Docker build information
+      ansible.builtin.debug:
+        msg: |
+          Building Docker image {{ image_name }}:{{ image_tag }}
+          Using {{ 'multi-stage' if use_multistage else 'simple' }} Dockerfile
+          Dockerfile: {{ dockerfile_path }}
+          Skip tests in Docker: {{ skip_tests_in_docker }}
+          Build args: {{ build_args }}
+
+    - name: Check if JAR exists (for simple Dockerfile)
+      ansible.builtin.find:
+        paths: "{{ project_dir }}/target"
+        patterns: "*.jar"
+        excludes: "*-sources.jar,*-javadoc.jar"
+      register: jar_files
+      when: not use_multistage
+
+    - name: Fail if JAR not found (for simple Dockerfile)
+      ansible.builtin.fail:
+        msg: "No JAR file found in {{ project_dir }}/target. Run 'ansible-playbook playbooks/package.yml' first."
+      when: not use_multistage and jar_files.matched == 0
+
+    - name: Check if Dockerfile exists
+      ansible.builtin.stat:
+        path: "{{ dockerfile_path }}"
+      register: dockerfile_stat
+
+    - name: Fail if Dockerfile not found
+      ansible.builtin.fail:
+        msg: "Dockerfile not found at {{ dockerfile_path }}"
+      when: not dockerfile_stat.stat.exists
+
+    - name: Build Docker image
+      community.docker.docker_image:
+        name: "{{ image_name }}"
+        tag: "{{ image_tag }}"
+        build:
+          path: "{{ project_dir }}"
+          dockerfile: "{{ dockerfile_path | basename }}"
+          args: "{{ build_args }}"
+        source: build
+        state: present
+      register: docker_build
+
+    - name: Display build result
+      ansible.builtin.debug:
+        msg: "Docker image {{ image_name }}:{{ image_tag }} built successfully"
+
+    - name: Tag image for registry
+      community.docker.docker_image:
+        name: "{{ image_name }}:{{ image_tag }}"
+        repository: "{{ registry }}/{{ image_name }}:{{ image_tag }}"
+        source: local
+      when: push_image and registry != ""
+
+    - name: Push image to registry
+      community.docker.docker_image:
+        name: "{{ registry }}/{{ image_name }}"
+        tag: "{{ image_tag }}"
+        push: true
+        source: local
+      when: push_image and registry != ""
+
+    - name: Display push result
+      ansible.builtin.debug:
+        msg: "Image pushed to {{ registry }}/{{ image_name }}:{{ image_tag }}"
+      when: push_image and registry != ""

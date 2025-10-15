@@ -1,0 +1,180 @@
+// Przykładowy Jenkinsfile wykorzystujący playbooki Ansible
+// Skopiuj ten plik do głównego katalogu projektu jako Jenkinsfile
+
+pipeline {
+    agent {
+        docker {
+            image 'python:3.11'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
+        }
+    }
+
+    environment {
+        JAVA_VERSION = '21'
+        ANSIBLE_VERSION = '2.15'
+        MAVEN_OPTS = '-Dmaven.repo.local=.m2/repository'
+    }
+
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        timestamps()
+        timeout(time: 1, unit: 'HOURS')
+    }
+
+    stages {
+        stage('Setup') {
+            steps {
+                script {
+                    echo "Setting up Ansible environment..."
+                    sh '''
+                        pip install "ansible==${ANSIBLE_VERSION}.*"
+                        cd ansible
+                        ansible-galaxy collection install -r requirements.yml
+                    '''
+                }
+            }
+        }
+
+        stage('Build') {
+            steps {
+                script {
+                    echo "Building project with Ansible..."
+                    sh '''
+                        cd ansible
+                        ansible-playbook playbooks/build.yml -e "skip_tests=true"
+                    '''
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                script {
+                    echo "Running tests with Ansible..."
+                    sh '''
+                        cd ansible
+                        ansible-playbook playbooks/test.yml
+                    '''
+                }
+            }
+            post {
+                always {
+                    junit 'target/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        stage('Quality Check') {
+            steps {
+                script {
+                    echo "Running quality checks with Ansible..."
+                    sh '''
+                        cd ansible
+                        ansible-playbook playbooks/quality-check.yml \
+                            -e "run_checkstyle=true" \
+                            -e "run_spotbugs=false" \
+                            -e "run_pmd=false"
+                    '''
+                }
+            }
+            post {
+                failure {
+                    echo "Quality checks failed, but continuing..."
+                }
+            }
+        }
+
+        stage('Package') {
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'develop'
+                    tag pattern: 'v\\d+\\.\\d+\\.\\d+', comparator: 'REGEXP'
+                }
+            }
+            steps {
+                script {
+                    echo "Packaging application with Ansible..."
+                    sh '''
+                        cd ansible
+                        ansible-playbook playbooks/package.yml -e "skip_tests=true"
+                    '''
+                }
+            }
+            post {
+                success {
+                    archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+                }
+            }
+        }
+
+        stage('Docker Build') {
+            when {
+                anyOf {
+                    branch 'main'
+                    tag pattern: 'v\\d+\\.\\d+\\.\\d+', comparator: 'REGEXP'
+                }
+            }
+            steps {
+                script {
+                    echo "Building Docker image with Ansible..."
+                    def imageTag = env.TAG_NAME ?: env.GIT_COMMIT.take(7)
+                    sh """
+                        cd ansible
+                        ansible-playbook playbooks/docker-build.yml \
+                            -e "image_name=${env.JOB_NAME}" \
+                            -e "image_tag=${imageTag}" \
+                            -e "push_image=false"
+                    """
+                }
+            }
+        }
+
+        stage('Deploy to Development') {
+            when {
+                branch 'develop'
+            }
+            steps {
+                script {
+                    echo "Deploying to development environment..."
+                    // Dodaj tutaj swój playbook do deployment
+                    sh '''
+                        cd ansible
+                        # ansible-playbook playbooks/deploy.yml -e "environment=development"
+                        echo "Deploy playbook not implemented yet"
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy to Production') {
+            when {
+                tag pattern: 'v\\d+\\.\\d+\\.\\d+', comparator: 'REGEXP'
+            }
+            steps {
+                input message: 'Deploy to Production?', ok: 'Deploy'
+                script {
+                    echo "Deploying to production environment..."
+                    // Dodaj tutaj swój playbook do deployment
+                    sh '''
+                        cd ansible
+                        # ansible-playbook playbooks/deploy.yml -e "environment=production"
+                        echo "Deploy playbook not implemented yet"
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            echo "Pipeline completed successfully!"
+        }
+        failure {
+            echo "Pipeline failed!"
+        }
+    }
+}

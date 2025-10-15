@@ -1,0 +1,22 @@
+---
+# Globalne zmienne dla wszystkich hostów
+
+# Maven configuration
+maven_wrapper: "./mvnw"
+maven_opts: "-Dmaven.test.failure.ignore=false"
+
+# Java configuration
+java_version: "21"
+
+# Docker configuration
+docker_registry: ""
+docker_image_name: "spring-app"
+docker_image_tag: "{{ lookup('env', 'GIT_COMMIT') | default('latest', true) }}"
+
+# Build configuration
+skip_tests: false
+run_quality_checks: true
+enable_code_coverage: true
+
+# Artifact configuration
+artifact_retention_days: 30
