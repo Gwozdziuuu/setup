@@ -56,15 +56,12 @@ public abstract class AbstractIntegrationTest {
 
     @DynamicPropertySource
     static void registerProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.create.jdbc-url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.create.username", postgres::getUsername);
-        registry.add("spring.datasource.create.password", postgres::getPassword);
-        registry.add("spring.datasource.write.jdbc-url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.write.username", postgres::getUsername);
-        registry.add("spring.datasource.write.password", postgres::getPassword);
-        registry.add("spring.datasource.read.jdbc-url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.read.username", postgres::getUsername);
-        registry.add("spring.datasource.read.password", postgres::getPassword);
+        registry.add("spring.datasource.command.jdbc-url", postgres::getJdbcUrl);
+        registry.add("spring.datasource.command.username", postgres::getUsername);
+        registry.add("spring.datasource.command.password", postgres::getPassword);
+        registry.add("spring.datasource.query.jdbc-url", postgres::getJdbcUrl);
+        registry.add("spring.datasource.query.username", postgres::getUsername);
+        registry.add("spring.datasource.query.password", postgres::getPassword);
         registry.add("spring.jpa.show-sql", () -> false);
         registry.add("spring.security.keycloak.enabled", () -> false);
     }

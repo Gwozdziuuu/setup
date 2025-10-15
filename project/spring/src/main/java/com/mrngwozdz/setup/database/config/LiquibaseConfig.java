@@ -15,9 +15,9 @@ public class LiquibaseConfig {
 
     @Bean
     public SpringLiquibase liquibase(
-            @Value("${spring.datasource.create.username}") String dbUsername,
-            @Value("${spring.datasource.create.password}") String dbPassword,
-            @Value("${spring.datasource.create.jdbc-url}") String dbUrl) {
+            @Value("${spring.datasource.command.username}") String dbUsername,
+            @Value("${spring.datasource.command.password}") String dbPassword,
+            @Value("${spring.datasource.command.jdbc-url}") String dbUrl) {
         SpringLiquibase liquibase = new SpringLiquibase();
         log.info("Liquibase config: dbUrl = {}, dbUsername = {}, dbPassword = {}***{}",
                 dbUrl, dbUsername, dbPassword.isEmpty() ? "" : dbPassword.substring(0, 1),

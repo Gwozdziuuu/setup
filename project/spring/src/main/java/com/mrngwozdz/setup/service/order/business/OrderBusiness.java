@@ -12,8 +12,8 @@ import com.mrngwozdz.setup.service.order.data.impl.OrderCommand;
 import com.mrngwozdz.setup.service.order.data.impl.OrderQuery;
 import com.mrngwozdz.setup.service.order.mapper.OrderRequestMapper;
 import io.vavr.control.Either;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.interceptor.TransactionAspectSupport;
@@ -27,12 +27,17 @@ import java.util.List;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class OrderBusiness {
 
     private final OrderQuery orderQuery;
     private final OrderCommand orderCommand;
     private final OrderBusiness self;  // Self-injection for internal method calls to use Spring proxy
+
+    public OrderBusiness(OrderQuery orderQuery, OrderCommand orderCommand, @Lazy OrderBusiness self) {
+        this.orderQuery = orderQuery;
+        this.orderCommand = orderCommand;
+        this.self = self;
+    }
 
     /**
      * Retrieves all orders from the database.

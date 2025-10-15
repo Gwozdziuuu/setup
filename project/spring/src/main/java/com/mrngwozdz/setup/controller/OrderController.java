@@ -14,6 +14,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.net.URI;
 
 import static com.mrngwozdz.setup.platform.http.RestResults.unwrapOrThrow;
 
@@ -46,7 +49,14 @@ public class OrderController implements OrderApi {
                 business.createOrder(request),
                 order -> new CreateOrderResponse(order.getOrderId())
         );
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(response.orderId())
+                .toUri();
+
+        return ResponseEntity.created(location).body(response);
     }
 
     @Override
